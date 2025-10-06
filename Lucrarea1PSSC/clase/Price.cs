@@ -4,10 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Lucrarea1PSSC
+namespace Lucrarea1PSSC.clase
 {
-   public record Produs(string Nume, double Pret)
-    {
-
-    }
+    public record Price(double pret) : IPrice;
 }

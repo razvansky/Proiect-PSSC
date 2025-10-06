@@ -4,11 +4,10 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Lucrarea1PSSC
+namespace Lucrarea1PSSC.clase
 {
-    public record KilogramQuantity(double Cantitate) : IQuantity
+    public interface IProdus
     {
-
 
     }
 }
