@@ -7,14 +7,20 @@ using System.Threading.Tasks;
 
 namespace Lucrarea1PSSC.clase.ClaseCos
 {
-    internal class CosDeCumparaturi
+    public class CosDeCumparaturi
     {
-       private List<ProdusCos> produse_cos;
-       private ProdusCos produs;
+        private List<ProdusCos> produse_cos;
+        private ProdusCos produs;
+
         public CosDeCumparaturi()
         {
             produse_cos = new List<ProdusCos>();
         }
+        public CosDeCumparaturi(List<ProdusCos> produse_cos)
+        {
+            this.produse_cos = produse_cos;
+        }
+
         public void AdaugaProdus(string Nume, List<Produs> produse_mag)
         {
             try { 
@@ -163,6 +169,12 @@ namespace Lucrarea1PSSC.clase.ClaseCos
                 totalCos += (double)produs.Price.pret * produs.Cantitate.Cantitate * produs.Kilogram.CantitateKilogram;
             }
             return totalCos;
+        }
+
+        // Add this public getter for serialization
+        public List<ProdusCos> GetProduseCos()
+        {
+            return produse_cos;
         }
     }
 }

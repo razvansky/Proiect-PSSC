@@ -92,6 +92,13 @@ internal class Program
                      foreach (var persoana in persoane)
                         {
                             Console.WriteLine($"Persoana: {persoana.Nume}, Email: {persoana.Email}, Adresa: {persoana.Adress}");
+                            Console.WriteLine("Cosuri:");
+                            foreach (var xcos in persoana.Cosuri)
+                            {
+                                xcos.AfiseazaProduse(); // This will print the products in the cart
+                                Console.WriteLine($"Total cos: {xcos.TotalCos()}");
+                            }
+                            Console.WriteLine();
                         }
                     break;
                 case 0:

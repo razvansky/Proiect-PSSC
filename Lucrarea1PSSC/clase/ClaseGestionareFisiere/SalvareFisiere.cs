@@ -1,5 +1,6 @@
 ﻿using Lucrarea1PSSC.clase.ClaseProduse;
 using Lucrarea1PSSC.clase.ClaseGestionarePersoane;
+using Lucrarea1PSSC.clase.ClaseCos;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -42,12 +43,33 @@ namespace Lucrarea1PSSC.clase.ClaseGestionareFisiere
                 int id = 1;
                 foreach (var persoana in persoane)
                 {
+                    var cosuriList = new List<JsonCos>();
+                    if (persoana.Cosuri != null)
+                    {
+                        foreach (var cos in persoana.Cosuri)
+                        {
+                            var produseCosList = new List<JsonProdusCos>();
+                            var produseCos = cos.GetProduseCos(); // You may need to expose this list via a property or method
+                            foreach (var produsCos in produseCos)
+                            {
+                                produseCosList.Add(new JsonProdusCos
+                                {
+                                    nume = produsCos.Nume,
+                                    cantitate = produsCos.Cantitate.Cantitate,
+                                    kilogram = produsCos.Kilogram.CantitateKilogram,
+                                    pret = produsCos.Price.pret
+                                });
+                            }
+                            cosuriList.Add(new JsonCos { produse_cos = produseCosList });
+                        }
+                    }
                     jsonList.Add(new JsonPersoana
                     {
                         id = id++,
                         nume = persoana.Nume.Name,
                         email = persoana.Email.email,
-                        adresa = persoana.Adress.adress
+                        adresa = persoana.Adress.adress,
+                        cosuri = cosuriList
                     });
                 }
                 var json = JsonSerializer.Serialize(jsonList, new JsonSerializerOptions { WriteIndented = true });
@@ -73,6 +95,20 @@ namespace Lucrarea1PSSC.clase.ClaseGestionareFisiere
             public string nume { get; set; }
             public string email { get; set; }
             public string adresa { get; set; }
+            public List<JsonCos> cosuri { get; set; }
+        }
+
+        private class JsonCos
+        {
+            public List<JsonProdusCos> produse_cos { get; set; }
+        }
+
+        private class JsonProdusCos
+        {
+            public string nume { get; set; }
+            public double cantitate { get; set; }
+            public double kilogram { get; set; }
+            public double pret { get; set; }
         }
     }
 }

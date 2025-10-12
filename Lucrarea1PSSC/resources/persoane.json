@@ -3,60 +3,107 @@
     "id": 1,
     "nume": "Andrei Popescu",
     "email": "andrei.popescu@example.com",
-    "adresa": "Str. Libertatii 12, Bucuresti"
+    "adresa": "Str. Libertatii 12, Bucuresti",
+    "cosuri": [
+      {
+        "produse_cos": [
+          { "nume": "Dero", "cantitate": 2, "kilogram": 20, "pret": 15.5 },
+          { "nume": "Sapun", "cantitate": 1, "kilogram": 5, "pret": 7.2 }
+        ]
+      },
+      {
+        "produse_cos": [
+          { "nume": "Apa", "cantitate": 3, "kilogram": 2, "pret": 1 }
+        ]
+      }
+    ]
   },
   {
     "id": 2,
     "nume": "Maria Ionescu",
     "email": "maria.ionescu@example.com",
-    "adresa": "Str. Mihai Eminescu 5, Cluj-Napoca"
+    "adresa": "Str. Mihai Eminescu 5, Cluj-Napoca",
+    "cosuri": [
+      {
+        "produse_cos": [
+          { "nume": "Gresie", "cantitate": 1, "kilogram": 3.2, "pret": 12 }
+        ]
+      }
+    ]
   },
   {
     "id": 3,
     "nume": "Cristian Stan",
     "email": "cristian.stan@example.com",
-    "adresa": "Str. Unirii 8, Timisoara"
+    "adresa": "Str. Unirii 8, Timisoara",
+    "cosuri": []
   },
   {
     "id": 4,
     "nume": "Elena Dumitru",
     "email": "elena.dumitru@example.com",
-    "adresa": "Str. Florilor 22, Iasi"
+    "adresa": "Str. Florilor 22, Iasi",
+    "cosuri": [
+      {
+        "produse_cos": [
+          { "nume": "Laveta", "cantitate": 2, "kilogram": 8.1, "pret": 5 }
+        ]
+      }
+    ]
   },
   {
     "id": 5,
     "nume": "Radu Vasilescu",
     "email": "radu.vasilescu@example.com",
-    "adresa": "Str. Independentei 3, Brasov"
+    "adresa": "Str. Independentei 3, Brasov",
+    "cosuri": []
   },
   {
     "id": 6,
     "nume": "Ioana Georgescu",
     "email": "ioana.georgescu@example.com",
-    "adresa": "Str. Primaverii 17, Constanta"
+    "adresa": "Str. Primaverii 17, Constanta",
+    "cosuri": [
+      {
+        "produse_cos": [
+          { "nume": "Detergent", "cantitate": 1, "kilogram": 6, "pret": 10 },
+          { "nume": "Burete", "cantitate": 4, "kilogram": 7.2, "pret": 3.5 }
+        ]
+      }
+    ]
   },
   {
     "id": 7,
     "nume": "Mihai Enache",
     "email": "mihai.enache@example.com",
-    "adresa": "Str. Revolutiei 9, Craiova"
+    "adresa": "Str. Revolutiei 9, Craiova",
+    "cosuri": []
   },
   {
     "id": 8,
     "nume": "Ana Marinescu",
     "email": "ana.marinescu@example.com",
-    "adresa": "Str. Victoriei 14, Sibiu"
+    "adresa": "Str. Victoriei 14, Sibiu",
+    "cosuri": []
   },
   {
     "id": 9,
     "nume": "Vlad Petrescu",
     "email": "vlad.petrescu@example.com",
-    "adresa": "Str. Republicii 6, Oradea"
+    "adresa": "Str. Republicii 6, Oradea",
+    "cosuri": [
+      {
+        "produse_cos": [
+          { "nume": "Mop", "cantitate": 1, "kilogram": 10.5, "pret": 25 }
+        ]
+      }
+    ]
   },
   {
     "id": 10,
     "nume": "Gabriela Ilie",
     "email": "gabriela.ilie@example.com",
-    "adresa": "Str. Dorobantilor 11, Ploiesti"
+    "adresa": "Str. Dorobantilor 11, Ploiesti",
+    "cosuri": []
   }
 ]
