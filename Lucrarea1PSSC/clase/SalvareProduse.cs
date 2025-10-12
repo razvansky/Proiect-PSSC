@@ -2,28 +2,43 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
+using System.Text.Json;
 
 namespace Lucrarea1PSSC.clase
 {
     public class SalvareProduse
     {
-        public static void SalvareProduseInFisier(string filePath, List<Produs> produse)
+   
+        public static void SalvareProduseInJson(string filePath, List<Produs> produse)
         {
             try
             {
-                var lines = new List<string>();
+                var jsonList = new List<JsonProdus>();
                 foreach (var produs in produse)
                 {
-                    // Use .Value to get the numeric value for each property
-                    string line = $"{produs.Nume} {produs.Quantity.Cantitate} {produs.Kilogram.CantitateKilogram} {produs.Pret.pret}";
-                    lines.Add(line);
+                    jsonList.Add(new JsonProdus
+                    {
+                        Nume = produs.Nume,
+                        Cantitate = produs.Quantity.Cantitate,
+                        CantitateKilogram = produs.Kilogram.CantitateKilogram,
+                        Pret = produs.Pret.pret
+                    });
                 }
-                File.WriteAllLines(filePath, lines, Encoding.UTF8);
+                var json = JsonSerializer.Serialize(jsonList, new JsonSerializerOptions { WriteIndented = true });
+                File.WriteAllText(filePath, json, Encoding.UTF8);
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Eroare la salvarea fisierului: {ex.Message}");
+                Console.WriteLine($"Eroare la salvarea fisierului JSON: {ex.Message}");
             }
+        }
+
+        private class JsonProdus
+        {
+            public string Nume { get; set; }
+            public double Cantitate { get; set; }
+            public double CantitateKilogram { get; set; }
+            public double Pret { get; set; }
         }
     }
 }

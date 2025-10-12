@@ -8,7 +8,7 @@ namespace Lucrarea1PSSC.clase
 {
     public record KilogramQuantity(double CantitateKilogram) : IQuantity
     {
-
+        
 
     }
 }

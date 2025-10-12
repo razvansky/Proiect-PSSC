@@ -1,46 +1,45 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using System.IO;
+using System.Text.Json;
 
 namespace Lucrarea1PSSC.clase
 {
     public class CitireProduse
     {
-        public static List<Produs> CitireProduseDinFisier(string filePath)
+        public static List<Produs> CitireProduseDinJson(string filePath)
         {
             var produse = new List<Produs>();
             try
             {
-                var lines = File.ReadAllLines(filePath);
-                foreach (var line in lines)
+                var json = File.ReadAllText(filePath);
+                var items = JsonSerializer.Deserialize<List<JsonProdus>>(json);
+
+                if (items != null)
                 {
-                    var parts = line.Split(' ');
-                    if (parts.Length == 4 &&
-                        !string.IsNullOrWhiteSpace(parts[0]) &&
-                        int.TryParse(parts[1], out int unitQty) &&
-                        double.TryParse(parts[2], out double kgQty) &&
-                        double.TryParse(parts[3], out double pret))
+                    foreach (var item in items)
                     {
-                        var nume = parts[0].Trim();
-                        var quantity = new UnitQuantity(unitQty);
-                        var kilogram = new KilogramQuantity(kgQty);
-                        var price = new Price(pret); 
-                        produse.Add(new Produs(nume, quantity, kilogram, price));
-                    }
-                    else
-                    {
-                        Console.WriteLine($"Linie invalida in fisier: {line}");
+                        var quantity = new UnitQuantity(item.Cantitate); // double
+                        var kilogram = new KilogramQuantity(item.CantitateKilogram); // double
+                        var price = new Price(item.Pret);
+                        produse.Add(new Produs(item.Nume, quantity, kilogram, price));
                     }
                 }
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Eroare la citirea fisierului: {ex.Message}");
+                Console.WriteLine($"Eroare la citirea fisierului JSON: {ex.Message}");
             }
             return produse;
         }
 
+        // Helper DTO for deserialization
+        private class JsonProdus
+        {
+            public string Nume { get; set; }
+            public double Cantitate { get; set; }
+            public double CantitateKilogram { get; set; }
+            public double Pret { get; set; }
+        }
     }
 }

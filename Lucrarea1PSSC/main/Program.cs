@@ -4,7 +4,7 @@ internal class Program
 {
     private static void Main(string[] args)
     {
-        List<Produs> produse = CitireProduse.CitireProduseDinFisier(@"..\..\..\resources\produsemagazin.txt");
+        List<Produs> produse = CitireProduse.CitireProduseDinJson(@"..\..\..\resources\produsemagazin.json");
         CosDeCumparaturi cos = null;
         string numeProdus;
         foreach (var produs in produse)
@@ -89,7 +89,7 @@ internal class Program
                     }
                     break;
                 case 0:
-                    SalvareProduse.SalvareProduseInFisier(@"..\..\..\resources\produsemagazin.txt", produse);
+                    SalvareProduse.SalvareProduseInJson(@"..\..\..\resources\produsemagazin.json", produse);
                     Environment.Exit(0);
                     break;
                 default:
