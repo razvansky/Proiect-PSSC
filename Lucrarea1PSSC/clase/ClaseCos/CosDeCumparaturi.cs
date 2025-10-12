@@ -50,7 +50,7 @@ namespace Lucrarea1PSSC.clase.ClaseCos
                 return;
             }
 
-            produs = new ProdusCos(produss.Nume, new UnitQuantity(1), produss.Kilogram, produss.Pret);
+            produs = new ProdusCos(produss.CodProdus, produss.Nume, new UnitQuantity(1), produss.Kilogram, produss.Pret);
             
             try
             {
@@ -151,7 +151,7 @@ namespace Lucrarea1PSSC.clase.ClaseCos
         {
             foreach (var produs in produse_cos)
             {
-                Console.WriteLine($"Produs: {produs.Nume}, Cantitate: {produs.Cantitate.Cantitate}, Kilograme: {produs.Kilogram.CantitateKilogram}, Pret unitar: {produs.Price.pret}, Pret total produs: {CalculeazaTotalProdus(produs)}");
+                Console.WriteLine($"Produs: {produs.Nume}, Cantitate: {produs.Cantitate.Cantitate}, Kilograme: {produs.Kilogram.CantitateKilogram},Cod Produs: {produs.CodProd.Cod}, Pret unitar: {produs.Price.pret}, Pret total produs: {CalculeazaTotalProdus(produs)}");
             }
         }
         

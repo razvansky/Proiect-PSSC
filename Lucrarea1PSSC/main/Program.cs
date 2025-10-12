@@ -13,7 +13,7 @@ internal class Program
         string numeProdus;
         foreach (var produs in produse)
         {
-            Console.WriteLine($"Produs: {produs.Nume}, Cantitate unitati: {produs.Quantity}, Cantitate kg: {produs.Kilogram}, Pret: {produs.Pret}");
+            Console.WriteLine($"Cod Produs: {produs.CodProdus.Cod} Produs: {produs.Nume}, Cantitate unitati: {produs.Quantity.Cantitate}, Cantitate kg: {produs.Kilogram.CantitateKilogram}, Pret: {produs.Pret.pret}");
         }
 
         do
@@ -95,7 +95,8 @@ internal class Program
                             Console.WriteLine("Cosuri:");
                             foreach (var xcos in persoana.Cosuri)
                             {
-                                xcos.AfiseazaProduse(); // This will print the products in the cart
+                                Console.WriteLine($"Cos nr: {persoana.Cosuri.IndexOf(xcos) + 1}:");
+                            xcos.AfiseazaProduse(); // This will print the products in the cart
                                 Console.WriteLine($"Total cos: {xcos.TotalCos()}");
                             }
                             Console.WriteLine();

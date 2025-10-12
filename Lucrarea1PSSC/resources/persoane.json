@@ -7,13 +7,13 @@
     "cosuri": [
       {
         "produse_cos": [
-          { "nume": "Dero", "cantitate": 2, "kilogram": 20, "pret": 15.5 },
-          { "nume": "Sapun", "cantitate": 1, "kilogram": 5, "pret": 7.2 }
+          { "CodProdus": 1, "nume": "Dero", "cantitate": 2, "kilogram": 20, "pret": 15.5 },
+          { "CodProdus": 2, "nume": "Sapun", "cantitate": 1, "kilogram": 5, "pret": 7.2 }
         ]
       },
       {
         "produse_cos": [
-          { "nume": "Apa", "cantitate": 3, "kilogram": 2, "pret": 1 }
+          { "CodProdus": 3, "nume": "Apa", "cantitate": 3, "kilogram": 2, "pret": 1 }
         ]
       }
     ]
@@ -26,7 +26,7 @@
     "cosuri": [
       {
         "produse_cos": [
-          { "nume": "Gresie", "cantitate": 1, "kilogram": 3.2, "pret": 12 }
+          { "CodProdus": 5, "nume": "Gresie", "cantitate": 1, "kilogram": 3.2, "pret": 12 }
         ]
       }
     ]
@@ -46,7 +46,7 @@
     "cosuri": [
       {
         "produse_cos": [
-          { "nume": "Laveta", "cantitate": 2, "kilogram": 8.1, "pret": 5 }
+          { "CodProdus": 7, "nume": "Laveta", "cantitate": 2, "kilogram": 8.1, "pret": 5 }
         ]
       }
     ]
@@ -66,8 +66,8 @@
     "cosuri": [
       {
         "produse_cos": [
-          { "nume": "Detergent", "cantitate": 1, "kilogram": 6, "pret": 10 },
-          { "nume": "Burete", "cantitate": 4, "kilogram": 7.2, "pret": 3.5 }
+          { "CodProdus": 8, "nume": "Detergent", "cantitate": 1, "kilogram": 6, "pret": 10 },
+          { "CodProdus": 9, "nume": "Burete", "cantitate": 4, "kilogram": 7.2, "pret": 3.5 }
         ]
       }
     ]
@@ -94,7 +94,7 @@
     "cosuri": [
       {
         "produse_cos": [
-          { "nume": "Mop", "cantitate": 1, "kilogram": 10.5, "pret": 25 }
+          { "CodProdus": 4, "nume": "Mop", "cantitate": 1, "kilogram": 10.5, "pret": 25 }
         ]
       }
     ]

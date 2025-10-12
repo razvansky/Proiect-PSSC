@@ -20,6 +20,7 @@ namespace Lucrarea1PSSC.clase.ClaseGestionareFisiere
                 {
                     jsonList.Add(new JsonProdus
                     {
+                        CodProdus = produs.CodProdus.Cod,
                         Nume = produs.Nume,
                         Cantitate = produs.Quantity.Cantitate,
                         CantitateKilogram = produs.Kilogram.CantitateKilogram,
@@ -49,11 +50,12 @@ namespace Lucrarea1PSSC.clase.ClaseGestionareFisiere
                         foreach (var cos in persoana.Cosuri)
                         {
                             var produseCosList = new List<JsonProdusCos>();
-                            var produseCos = cos.GetProduseCos(); // You may need to expose this list via a property or method
+                            var produseCos = cos.GetProduseCos();
                             foreach (var produsCos in produseCos)
                             {
                                 produseCosList.Add(new JsonProdusCos
                                 {
+                                    CodProdus = produsCos.CodProd.Cod,
                                     nume = produsCos.Nume,
                                     cantitate = produsCos.Cantitate.Cantitate,
                                     kilogram = produsCos.Kilogram.CantitateKilogram,
@@ -83,6 +85,7 @@ namespace Lucrarea1PSSC.clase.ClaseGestionareFisiere
 
         private class JsonProdus
         {
+            public int CodProdus { get; set; }
             public string Nume { get; set; }
             public double Cantitate { get; set; }
             public double CantitateKilogram { get; set; }
@@ -105,6 +108,7 @@ namespace Lucrarea1PSSC.clase.ClaseGestionareFisiere
 
         private class JsonProdusCos
         {
+            public int CodProdus { get; set; }
             public string nume { get; set; }
             public double cantitate { get; set; }
             public double kilogram { get; set; }

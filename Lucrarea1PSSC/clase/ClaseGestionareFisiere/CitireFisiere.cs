@@ -22,10 +22,11 @@ namespace Lucrarea1PSSC.clase.ClaseGestionareFisiere
                 {
                     foreach (var item in items)
                     {
-                        var quantity = new UnitQuantity(item.Cantitate); // double
-                        var kilogram = new KilogramQuantity(item.CantitateKilogram); // double
+                        var quantity = new UnitQuantity(item.Cantitate);
+                        var kilogram = new KilogramQuantity(item.CantitateKilogram);
                         var price = new Price(item.Pret);
-                        produse.Add(new Produs(item.Nume, quantity, kilogram, price));
+                        var codProdus = new CodProdus(item.CodProdus);
+                        produse.Add(new Produs(codProdus, item.Nume, quantity, kilogram, price));
                     }
                 }
             }
@@ -52,7 +53,6 @@ namespace Lucrarea1PSSC.clase.ClaseGestionareFisiere
                         var email = new EmailP(item.email);
                         var adresa = new Adress(item.adresa);
 
-                        // Map carts
                         var cosuri = new List<CosDeCumparaturi>();
                         if (item.cosuri != null)
                         {
@@ -63,7 +63,18 @@ namespace Lucrarea1PSSC.clase.ClaseGestionareFisiere
                                 {
                                     foreach (var prodJson in cosJson.produse_cos)
                                     {
+                                        // Replace this line inside CitirePersoaneDinJson method:
+                                        // var produsCos = new ProdusCos(
+                                        //     prodJson.CodProdus,
+                                        //     prodJson.nume,
+                                        //     new UnitQuantity(prodJson.cantitate),
+                                        //     new KilogramQuantity(prodJson.kilogram),
+                                        //     new Price(prodJson.pret)
+                                        // );
+
+                                        // With this line:
                                         var produsCos = new ProdusCos(
+                                            new CodProdus(prodJson.CodProdus),
                                             prodJson.nume,
                                             new UnitQuantity(prodJson.cantitate),
                                             new KilogramQuantity(prodJson.kilogram),
@@ -91,6 +102,7 @@ namespace Lucrarea1PSSC.clase.ClaseGestionareFisiere
         // Helper DTOs for deserialization
         private class JsonProdus
         {
+            public int CodProdus { get; set; }
             public string Nume { get; set; }
             public double Cantitate { get; set; }
             public double CantitateKilogram { get; set; }
@@ -113,6 +125,7 @@ namespace Lucrarea1PSSC.clase.ClaseGestionareFisiere
 
         private class JsonProdusCos
         {
+            public int CodProdus { get; set; }
             public string nume { get; set; }
             public double cantitate { get; set; }
             public double kilogram { get; set; }

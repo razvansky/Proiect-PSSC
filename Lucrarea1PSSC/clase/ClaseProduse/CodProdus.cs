@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace Lucrarea1PSSC.clase.ClaseProduse
 {
-   public record Produs( CodProdus CodProdus,string Nume,UnitQuantity Quantity,KilogramQuantity Kilogram, Price Pret) : IProdus
+    public record CodProdus(int Cod) : ICodProdus
     {
     }
 }
