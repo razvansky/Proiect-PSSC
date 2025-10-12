@@ -1,10 +1,14 @@
-﻿using Lucrarea1PSSC.clase;
+﻿using Lucrarea1PSSC.clase.ClaseCos;
+using Lucrarea1PSSC.clase.ClaseGestionareFisiere;
+using Lucrarea1PSSC.clase.ClaseProduse;
+using Lucrarea1PSSC.clase.ClaseGestionarePersoane;
 
 internal class Program
 {
     private static void Main(string[] args)
     {
-        List<Produs> produse = CitireProduse.CitireProduseDinJson(@"..\..\..\resources\produsemagazin.json");
+        List<Produs> produse = CitireFisiere.CitireProduseDinJson(@"..\..\..\resources\produsemagazin.json");
+        List<Persoana> persoane = CitireFisiere.CitirePersoaneDinJson(@"..\..\..\resources\persoane.json");
         CosDeCumparaturi cos = null;
         string numeProdus;
         foreach (var produs in produse)
@@ -21,6 +25,7 @@ internal class Program
             Console.WriteLine("5.Afiseaza cos");
             Console.WriteLine("6.Total de plata");
             Console.WriteLine("7.Afiseaza produse magazin");
+            Console.WriteLine("8.Afiseaza persoane");
             Console.WriteLine("0.Iesire");
             string input = Console.ReadLine();
             if (!int.TryParse(input, out int optiune))
@@ -34,12 +39,7 @@ internal class Program
             {
                 case 1:
                     try {
-                        if (cos != null)
-                        {
-                            throw new InvalidOperationException("Cosul a fost deja creat");
-                        }
-                        cos = new CosDeCumparaturi();
-                        Console.WriteLine("Cos creat cu succes");
+                       
                        
                     }
                     catch(InvalidOperationException ex)
@@ -86,10 +86,16 @@ internal class Program
                         foreach (var produs in produse)
                         {
                             Console.WriteLine($"Produs: {produs.Nume}, Cantitate unitati: {produs.Quantity}, Cantitate kg: {produs.Kilogram}, Pret: {produs.Pret}");
-                    }
+                        }
+                    break;
+                case 8:
+                     foreach (var persoana in persoane)
+                        {
+                            Console.WriteLine($"Persoana: {persoana.Nume}, Email: {persoana.Email}, Adresa: {persoana.Adress}");
+                        }
                     break;
                 case 0:
-                    SalvareProduse.SalvareProduseInJson(@"..\..\..\resources\produsemagazin.json", produse);
+                    SalvareFisiere.SalvareProduseInJson(@"..\..\..\resources\produsemagazin.json", produse);
                     Environment.Exit(0);
                     break;
                 default:

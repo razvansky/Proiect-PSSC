@@ -1,10 +1,11 @@
-﻿using System;
+﻿using Lucrarea1PSSC.clase.ClaseProduse;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Lucrarea1PSSC.clase
+namespace Lucrarea1PSSC.clase.ClaseCos
 {
     internal class CosDeCumparaturi
     {

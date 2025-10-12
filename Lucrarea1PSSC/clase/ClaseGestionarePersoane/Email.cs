@@ -4,10 +4,9 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Lucrarea1PSSC.clase
+namespace Lucrarea1PSSC.clase.ClaseGestionarePersoane
 {
-    public interface IPrice
+    public record EmailP(string email) : IEmail
     {
-        
     }
 }

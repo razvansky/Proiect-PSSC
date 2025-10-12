@@ -4,10 +4,9 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Lucrarea1PSSC.clase
+namespace Lucrarea1PSSC.clase.ClaseGestionarePersoane
 {
-    public interface IProdus
+    public record Nume(string Name) : INume
     {
-
     }
 }
