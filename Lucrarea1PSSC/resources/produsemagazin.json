@@ -2,7 +2,7 @@
   {
     "CodProdus": 1,
     "Nume": "Dero",
-    "Cantitate": 13,
+    "Cantitate": 10,
     "CantitateKilogram": 20,
     "Pret": 15.5
   },
@@ -16,7 +16,7 @@
   {
     "CodProdus": 3,
     "Nume": "Apa",
-    "Cantitate": 48,
+    "Cantitate": 47,
     "CantitateKilogram": 2,
     "Pret": 1
   },

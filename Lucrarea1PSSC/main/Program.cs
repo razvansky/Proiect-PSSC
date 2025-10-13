@@ -15,7 +15,10 @@ internal class Program
         {
             Console.WriteLine($"Cod Produs: {produs.CodProdus.Cod} Produs: {produs.Nume}, Cantitate unitati: {produs.Quantity.Cantitate}, Cantitate kg: {produs.Kilogram.CantitateKilogram}, Pret: {produs.Pret.pret}");
         }
-
+        foreach (var persoana in persoane)
+        {
+            Console.WriteLine($"Persoana: {persoana.Nume.Name}");
+        }
         do
         {
             Console.WriteLine("1.Creare cos cumparaturi");
@@ -26,6 +29,7 @@ internal class Program
             Console.WriteLine("6.Total de plata");
             Console.WriteLine("7.Afiseaza produse magazin");
             Console.WriteLine("8.Afiseaza persoane");
+            Console.WriteLine("9.Plateste cos");
             Console.WriteLine("0.Iesire");
             string input = Console.ReadLine();
             if (!int.TryParse(input, out int optiune))
@@ -39,8 +43,22 @@ internal class Program
             {
                 case 1:
                     try {
+                        Console.WriteLine("Introduceti numele persoanei:");
+                        string numePersoana = Console.ReadLine();
+                        if(string.IsNullOrWhiteSpace(numePersoana))
+                        {
+                            throw new ArgumentException("Numele persoanei nu poate fi gol");
+                        }
+                          var persoana = persoane.FirstOrDefault(p => p.Nume.Name == numePersoana);
+                        if(persoana==null)
+                        {
+                            throw new InvalidOperationException("Persoana nu exista");
+                        }
                        
-                       
+                            cos = new CosDeCumparaturi();
+                       Console.WriteLine("Cos creat cu succes");
+                        persoane[persoane.IndexOf(persoana)] = persoana.AdaugaCos(cos);
+                        Console.WriteLine($"Cos adaugat {numePersoana} cu succes");
                     }
                     catch(InvalidOperationException ex)
                     {
@@ -74,7 +92,8 @@ internal class Program
                     cos.GolesteCos(produse);
                     break;
 
-                case 5: 
+                case 5:
+                    Console.WriteLine($"Stare cos: {cos.GetStareCos()}");
                     cos.AfiseazaProduse();
                     break;
 
@@ -83,6 +102,7 @@ internal class Program
                     break;
 
                 case 7:
+                    
                         foreach (var produs in produse)
                         {
                             Console.WriteLine($"Produs: {produs.Nume}, Cantitate unitati: {produs.Quantity}, Cantitate kg: {produs.Kilogram}, Pret: {produs.Pret}");
@@ -102,8 +122,12 @@ internal class Program
                             Console.WriteLine();
                         }
                     break;
+                case 9:
+                    cos.platesteCos();
+                    break;
                 case 0:
                     SalvareFisiere.SalvareProduseInJson(@"..\..\..\resources\produsemagazin.json", produse);
+                    SalvareFisiere.SalvarePersoaneInJson(@"..\..\..\resources\persoane.json", persoane);
                     Environment.Exit(0);
                     break;
                 default:
