@@ -55,6 +55,17 @@
             "pret": 1
           }
         ]
+      },
+      {
+        "produse_cos": [
+          {
+            "CodProdus": 1,
+            "nume": "Dero",
+            "cantitate": 1,
+            "kilogram": 20,
+            "pret": 15.5
+          }
+        ]
       }
     ]
   },

@@ -30,6 +30,7 @@ internal class Program
             Console.WriteLine("7.Afiseaza produse magazin");
             Console.WriteLine("8.Afiseaza persoane");
             Console.WriteLine("9.Plateste cos");
+            Console.WriteLine("10.Plaseaza comanda");
             Console.WriteLine("0.Iesire");
             string input = Console.ReadLine();
             if (!int.TryParse(input, out int optiune))
@@ -130,6 +131,24 @@ internal class Program
                 case 9:
                     cos.platesteCos();
                     break;
+                case 10:
+                    Console.WriteLine("Introduceti numele persoanei:");
+                    string numePersoanaComanda = Console.ReadLine();
+                    var persoanaComanda = persoane.FirstOrDefault(p => p.Nume.Name == numePersoanaComanda);
+                    if(persoanaComanda==null)
+                    {
+                        Console.WriteLine("Persoana nu exista");
+                        break;
+                    }
+                    if (persoanaComanda.CosCurent == null)
+                    {
+                        Console.WriteLine("Persoana nu are cos curent");
+                        break;
+                    }
+                    var eventres = PlasareComandaWorkflow.PlaseazaComanda(persoanaComanda, persoanaComanda.CosCurent);
+                    Console.WriteLine(eventres.Message);
+                  
+                        break;
                 case 0:
                     SalvareFisiere.SalvareProduseInJson(@"..\..\..\resources\produsemagazin.json", produse);
                     SalvareFisiere.SalvarePersoaneInJson(@"..\..\..\resources\persoane.json", persoane);
