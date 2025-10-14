@@ -148,7 +148,19 @@
     "nume": "Ana Marinescu",
     "email": "ana.marinescu@example.com",
     "adresa": "Str. Victoriei 14, Sibiu",
-    "cosuri": []
+    "cosuri": [
+      {
+        "produse_cos": [
+          {
+            "CodProdus": 4,
+            "nume": "Mop",
+            "cantitate": 1,
+            "kilogram": 10.5,
+            "pret": 25
+          }
+        ]
+      }
+    ]
   },
   {
     "id": 9,

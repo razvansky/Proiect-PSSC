@@ -37,6 +37,11 @@ namespace Lucrarea1PSSC.clase.ClaseCos
             }
         }
 
+        public CosDeCumparaturi(int abc)
+        {
+            stare_cos = new UnvalidatedCos(true);
+        }
+
         public CosDeCumparaturi()
         {
             produse_cos = new List<ProdusCos>();
@@ -64,10 +69,19 @@ namespace Lucrarea1PSSC.clase.ClaseCos
                 }
                 if(stare_cos is PayedCos)
                 {
-                    throw new InvalidOperationException("Cosul a fost platit, nu se mai pot adauga produse");
+                    throw new InvalidCosException("Cosul a fost platit, nu se mai pot adauga produse");
+                }
+                if(stare_cos is UnvalidatedCos)
+                {
+                    throw new InvalidCosException("Cosul nu este validat, nu se pot adauga produse");
                 }
             }
             catch (ArgumentException ex)
+            {
+                Console.WriteLine(ex.Message);
+                return;
+            }
+            catch (InvalidCosException ex)
             {
                 Console.WriteLine(ex.Message);
                 return;
@@ -97,6 +111,7 @@ namespace Lucrarea1PSSC.clase.ClaseCos
                     throw new ArgumentException("Produsul a fost epuizat");
 
                 }
+
             }
             catch (ArgumentException ex)
             {
@@ -130,10 +145,19 @@ namespace Lucrarea1PSSC.clase.ClaseCos
                 }
                 if(stare_cos is PayedCos)
                 {
-                    throw new InvalidOperationException("Cosul a fost platit, nu se mai pot sterge produse");
+                    throw new InvalidCosException("Cosul a fost platit, nu se mai pot sterge produse");
+                }
+                if(stare_cos is UnvalidatedCos)
+                {
+                    throw new InvalidCosException("Cosul nu este validat, nu se pot sterge produse");
                 }
             }
             catch (ArgumentException ex)
+            {
+                Console.WriteLine(ex.Message);
+                return;
+            }
+            catch (InvalidCosException ex)
             {
                 Console.WriteLine(ex.Message);
                 return;
@@ -177,6 +201,10 @@ namespace Lucrarea1PSSC.clase.ClaseCos
                 {
                     throw new InvalidOperationException("Cosul a fost platit, nu se mai poate goli");
                 }
+                if(stare_cos is UnvalidatedCos || stare_cos is EmptyCos)
+                {
+                    throw new InvalidOperationException("Cosul nu este validat, nu se poate goli");
+                }
             }
             catch (InvalidOperationException ex)
             {
@@ -216,7 +244,23 @@ namespace Lucrarea1PSSC.clase.ClaseCos
             
             return pret;
         }
-        public double TotalCos() {         
+        public double TotalCos() {
+            try
+            {
+                if(stare_cos is UnvalidatedCos)
+                {
+                    throw new InvalidCosException("Cosul nu este validat, nu se poate calcula totalul");
+                }
+                if(stare_cos is EmptyCos)
+                {
+                    throw new InvalidCosException("Cosul este gol, nu se poate calcula totalul");
+                }
+            }
+            catch(InvalidCosException ex)
+            {
+                Console.WriteLine(ex.Message);
+                return 0;
+            }
             double totalCos = 0;
             foreach (var produs in produse_cos)
             {
@@ -238,6 +282,7 @@ namespace Lucrarea1PSSC.clase.ClaseCos
                 stare_cos = stare_cos switch
                 {
                     PayedCos payed when payed.payed => throw new InvalidCosException("Cosul a fost deja platit!"),
+                    UnvalidatedCos unvalidated => throw new InvalidCosException("Cosul nu este validat!"),
                     EmptyCos(true) => throw new InvalidCosException("Cosul este gol!"),
                     _ => new PayedCos(true)
                 };

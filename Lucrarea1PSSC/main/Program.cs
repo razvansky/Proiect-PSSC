@@ -9,7 +9,7 @@ internal class Program
     {
         List<Produs> produse = CitireFisiere.CitireProduseDinJson(@"..\..\..\resources\produsemagazin.json");
         List<Persoana> persoane = CitireFisiere.CitirePersoaneDinJson(@"..\..\..\resources\persoane.json");
-        CosDeCumparaturi cos = null;
+        CosDeCumparaturi cos = new CosDeCumparaturi(1);
         string numeProdus;
         foreach (var produs in produse)
         {
@@ -93,6 +93,11 @@ internal class Program
                     break;
 
                 case 5:
+                    if(cos.GetStareCos() is UnvalidatedCos)
+                    {
+                        Console.WriteLine("Cosul este invalid, generati un cos nou");
+                        break;
+                    }
                     Console.WriteLine($"Stare cos: {cos.GetStareCos()}");
                     cos.AfiseazaProduse();
                     break;
