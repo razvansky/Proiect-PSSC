@@ -2,15 +2,24 @@
 using Lucrarea1PSSC.clase.ClaseGestionareFisiere;
 using Lucrarea1PSSC.clase.ClaseProduse;
 using Lucrarea1PSSC.clase.ClaseGestionarePersoane;
+using Lucrarea1PSSC.clase.Infrastructure;
+using Lucrarea1PSSC.clase.Workflow;
 
 internal class Program
 {
     private static void Main(string[] args)
     {
+        // Setup event bus subscriptions
+        SetupEventBusSubscriptions();
+
         List<Produs> produse = CitireFisiere.CitireProduseDinJson(@"..\..\..\resources\produsemagazin.json");
         List<Persoana> persoane = CitireFisiere.CitirePersoaneDinJson(@"..\..\..\resources\persoane.json");
         CosDeCumparaturi cos = new CosDeCumparaturi(1);
         string numeProdus;
+        
+        Console.WriteLine("=== E-Commerce Shopping System ===");
+        Console.WriteLine("Event-Driven Architecture with DDD\n");
+        
         foreach (var produs in produse)
         {
             Console.WriteLine($"Cod Produs: {produs.CodProdus.Cod} Produs: {produs.Nume}, Cantitate unitati: {produs.Quantity.Cantitate}, Cantitate kg: {produs.Kilogram.CantitateKilogram}, Pret: {produs.Pret.pret}");
@@ -19,8 +28,10 @@ internal class Program
         {
             Console.WriteLine($"Persoana: {persoana.Nume.Name}");
         }
+        
         do
         {
+            Console.WriteLine("\n=== MENU ===");
             Console.WriteLine("1.Creare cos cumparaturi");
             Console.WriteLine("2.Adauga in cos");
             Console.WriteLine("3.Sterge din cos");
@@ -32,6 +43,8 @@ internal class Program
             Console.WriteLine("9.Plateste cos");
             Console.WriteLine("10.Plaseaza comanda");
             Console.WriteLine("0.Iesire");
+            Console.Write("Alegeti optiunea: ");
+            
             string input = Console.ReadLine();
             if (!int.TryParse(input, out int optiune))
             {
@@ -43,58 +56,145 @@ internal class Program
             switch (optiune)
             {
                 case 1:
-                    try {
-                        Console.WriteLine("Introduceti numele persoanei:");
-                        string numePersoana = Console.ReadLine();
-                        if(string.IsNullOrWhiteSpace(numePersoana))
-                        {
-                            throw new ArgumentException("Numele persoanei nu poate fi gol");
-                        }
-                          var persoana = persoane.FirstOrDefault(p => p.Nume.Name == numePersoana);
-                        if(persoana==null)
-                        {
-                            throw new InvalidOperationException("Persoana nu exista");
-                        }
-                       
-                            cos = new CosDeCumparaturi();
-                       Console.WriteLine("Cos creat cu succes");
-                        persoane[persoane.IndexOf(persoana)] = persoana.AdaugaCos(cos);
-                        Console.WriteLine($"Cos adaugat {numePersoana} cu succes");
-                    }
-                    catch(InvalidOperationException ex)
+                    // CREATE CART WITH COMMANDS AND EVENTS
+                    Console.WriteLine("Introduceti numele persoanei:");
+                    string numePersoana = Console.ReadLine();
+                    
+                    // Use command with built-in validation
+                    var (success, command, error) = 
+                        Lucrarea1PSSC.clase.ClaseCos.Commands.CreateCartCommand.TryCreate(numePersoana);
+                    
+                    if (!success)
                     {
-                        Console.WriteLine(ex.Message);
+                        Console.WriteLine($"Eroare: {error}");
                         break;
                     }
-                   
-                    break;
-                case 2:
-                    numeProdus=Console.ReadLine();
-                    try
+
+                    var persoana = persoane.FirstOrDefault(p => p.Nume.Name == command.NumePersoana);
+                    if (persoana == null)
                     {
-                        if(cos==null)
-                        {
-                            throw new NullReferenceException("Cosul nu a fost creat");
-                        }
-                    }
-                    catch(NullReferenceException ex)
-                    {
-                        Console.WriteLine(ex.Message);
+                        Console.WriteLine("Persoana nu exista");
                         break;
                     }
-                    cos.AdaugaProdus(numeProdus,produse);
-                    break;
-                case 3:
-                    numeProdus = Console.ReadLine();
-                    cos.StergeProdus(numeProdus,produse);
+
+                    // Create cart
+                    cos = new CosDeCumparaturi();
+                    Console.WriteLine("Cos creat cu succes");
+
+                    // Update person
+                    var updatedPersoana = persoana.AdaugaCos(cos);
+                    persoane[persoane.IndexOf(persoana)] = updatedPersoana;
+
+                    // Publish domain event
+                    EventBus.Publish(new CartEvents.CosCreatEvent(
+                        command.NumePersoana, 
+                        DateTime.UtcNow
+                    ));
+
+                    Console.WriteLine($"Cos adaugat {command.NumePersoana} cu succes");
                     break;
 
-                case 4: 
+                case 2:
+                    // ADD PRODUCT WITH COMMANDS AND EVENTS
+                    Console.WriteLine("Introduceti numele produsului:");
+                    numeProdus = Console.ReadLine();
+
+                    if (cos == null)
+                    {
+                        Console.WriteLine("Cosul nu a fost creat");
+                        break;
+                    }
+
+                    // Use command with validation
+                    var (addSuccess, addCommand, addError) = 
+                        Lucrarea1PSSC.clase.ClaseCos.Commands.AddProductToCartCommand.TryCreate(numeProdus);
+
+                    if (!addSuccess)
+                    {
+                        Console.WriteLine($"Eroare: {addError}");
+                        break;
+                    }
+
+                    // Execute domain logic
+                    var produsToAdd = produse.FirstOrDefault(p => p.Nume == addCommand.NumeProdus);
+                    if (produsToAdd != null)
+                    {
+                        cos.AdaugaProdus(addCommand.NumeProdus, produse);
+                        
+                        // Publish event
+                        EventBus.Publish(new CartEvents.ProdusAdaugatInCosEvent(
+                            produsToAdd.Nume,
+                            produsToAdd.CodProdus.Cod,
+                            1,
+                            produsToAdd.Pret.pret,
+                            DateTime.UtcNow
+                        ));
+                    }
+                    break;
+
+                case 3:
+                    // REMOVE PRODUCT WITH COMMANDS AND EVENTS
+                    Console.WriteLine("Introduceti numele produsului:");
+                    numeProdus = Console.ReadLine();
+                    
+                    if (cos == null)
+                    {
+                        Console.WriteLine("Cosul nu a fost creat");
+                        break;
+                    }
+
+                    var (removeSuccess, removeCommand, removeError) = 
+                        Lucrarea1PSSC.clase.ClaseCos.Commands.RemoveProductFromCartCommand.TryCreate(numeProdus);
+
+                    if (!removeSuccess)
+                    {
+                        Console.WriteLine($"Eroare: {removeError}");
+                        break;
+                    }
+
+                    var produsInCos = cos.GetProduseCos()?.FirstOrDefault(p => p.Nume == removeCommand.NumeProdus);
+                    if (produsInCos != null)
+                    {
+                        cos.StergeProdus(removeCommand.NumeProdus, produse);
+                        
+                        // Publish event
+                        EventBus.Publish(new CartEvents.ProdusStergeDinCosEvent(
+                            produsInCos.Nume,
+                            produsInCos.CodProd.Cod,
+                            produsInCos.Cantitate.Cantitate,
+                            DateTime.UtcNow
+                        ));
+                    }
+                    break;
+
+                case 4:
+                    // EMPTY CART WITH COMMANDS AND EVENTS
+                    if (cos == null)
+                    {
+                        Console.WriteLine("Cosul nu a fost creat");
+                        break;
+                    }
+
+                    var emptyCommand = Lucrarea1PSSC.clase.ClaseCos.Commands.EmptyCartCommand.Create();
+                    
+                    var produseInCos = cos.GetProduseCos()?.Select(p => 
+                        (p.Nume, p.CodProd.Cod, p.Cantitate.Cantitate)
+                    ).ToList();
+
                     cos.GolesteCos(produse);
+                    
+                    if (produseInCos != null && produseInCos.Count > 0)
+                    {
+                        // Publish event
+                        EventBus.Publish(new CartEvents.CosGolitEvent(
+                            produseInCos,
+                            DateTime.UtcNow
+                        ));
+                    }
                     break;
 
                 case 5:
-                    if(cos.GetStareCos() is UnvalidatedCos)
+                    if (cos.GetStareCos() is UnvalidatedCos)
                     {
                         Console.WriteLine("Cosul este invalid, generati un cos nou");
                         break;
@@ -108,58 +208,198 @@ internal class Program
                     break;
 
                 case 7:
-                    
-                        foreach (var produs in produse)
-                        {
-                            Console.WriteLine($"Produs: {produs.Nume}, Cantitate unitati: {produs.Quantity}, Cantitate kg: {produs.Kilogram}, Pret: {produs.Pret}");
-                        }
+                    Console.WriteLine("\n=== PRODUSE MAGAZIN ===");
+                    foreach (var produs in produse)
+                    {
+                        Console.WriteLine($"Produs: {produs.Nume}, Cantitate unitati: {produs.Quantity}, Cantitate kg: {produs.Kilogram}, Pret: {produs.Pret}");
+                    }
                     break;
+
                 case 8:
-                     foreach (var persoana in persoane)
+                    Console.WriteLine("\n=== PERSOANE ===");
+                    foreach (var pers in persoane)
+                    {
+                        Console.WriteLine($"Persoana: {pers.Nume}, Email: {pers.Email}, Adresa: {pers.Adress}");
+                        Console.WriteLine("Cosuri:");
+                        foreach (var xcos in pers.Cosuri)
                         {
-                            Console.WriteLine($"Persoana: {persoana.Nume}, Email: {persoana.Email}, Adresa: {persoana.Adress}");
-                            Console.WriteLine("Cosuri:");
-                            foreach (var xcos in persoana.Cosuri)
-                            {
-                                Console.WriteLine($"Cos nr: {persoana.Cosuri.IndexOf(xcos) + 1}:");
-                            xcos.AfiseazaProduse(); // This will print the products in the cart
-                                Console.WriteLine($"Total cos: {xcos.TotalCos()}");
-                            }
-                            Console.WriteLine();
+                            Console.WriteLine($"Cos nr: {pers.Cosuri.IndexOf(xcos) + 1}:");
+                            xcos.AfiseazaProduse();
+                            Console.WriteLine($"Total cos: {xcos.TotalCos()}");
                         }
+                        Console.WriteLine();
+                    }
                     break;
+
                 case 9:
-                    cos.platesteCos();
+                    // PAY CART WITH COMMANDS AND EVENTS
+                    if (cos == null)
+                    {
+                        Console.WriteLine("Cosul nu a fost creat");
+                        break;
+                    }
+
+                    var payCommand = Lucrarea1PSSC.clase.ClaseCos.Commands.PayCartCommand.Create();
+
+                    // Execute payment
+                    bool paymentSuccess = cos.platesteCos();
+
+                    if (paymentSuccess)
+                    {
+                        // Find current person
+                        var currentPerson = persoane.FirstOrDefault(p => p.CosCurent == cos);
+                        if (currentPerson != null)
+                        {
+                            // Publish payment event
+                            EventBus.Publish(new CartEvents.CosPlatitEvent(
+                                currentPerson.Nume.Name,
+                                cos.TotalCos(),
+                                cos.GetProduseCos().Count,
+                                DateTime.UtcNow
+                            ));
+                        }
+                    }
                     break;
+
                 case 10:
+                    // PLACE ORDER WITH AGGREGATE AND COMMANDS
                     Console.WriteLine("Introduceti numele persoanei:");
                     string numePersoanaComanda = Console.ReadLine();
+                    
                     var persoanaComanda = persoane.FirstOrDefault(p => p.Nume.Name == numePersoanaComanda);
-                    if(persoanaComanda==null)
+                    if (persoanaComanda == null)
                     {
                         Console.WriteLine("Persoana nu exista");
                         break;
                     }
+
                     if (persoanaComanda.CosCurent == null)
                     {
                         Console.WriteLine("Persoana nu are cos curent");
                         break;
                     }
-                    var eventres = PlasareComandaWorkflow.PlaseazaComanda(persoanaComanda, persoanaComanda.CosCurent);
-                    Console.WriteLine(eventres.Message);
-                  
+
+                    // Use PlaceOrderCommand for validation
+                    var (cmdSuccess, placeOrderCmd, cmdError) = 
+                        Lucrarea1PSSC.clase.Workflow.Commands.PlaceOrderCommand.TryCreate(
+                            persoanaComanda, 
+                            persoanaComanda.CosCurent
+                        );
+
+                    if (!cmdSuccess)
+                    {
+                        Console.WriteLine($"Eroare validare: {cmdError}");
                         break;
+                    }
+
+                    // Use ComandaAggregate to create order with invariants
+                    var (orderSuccess, order, orderError) = 
+                        ComandaAggregate.CreateFromPaidCart(
+                            persoanaComanda, 
+                            persoanaComanda.CosCurent
+                        );
+
+                    if (orderSuccess)
+                    {
+                        // Order created successfully
+                        var successEvent = order.ToSuccessEvent();
+                        
+                        Console.WriteLine(successEvent.Message);
+                        Console.WriteLine($"Order ID: {order.ComandaId}");
+                        Console.WriteLine($"Total: {order.Total} lei");
+                        Console.WriteLine($"Produse: {order.Produse.Count}");
+                        Console.WriteLine($"Stare: {order.Stare}");
+                        Console.WriteLine($"Data plasare: {order.DataPlasare:dd/MM/yyyy HH:mm:ss}");
+
+                        // Publish success event
+                        EventBus.Publish(successEvent);
+                    }
+                    else
+                    {
+                        // Order creation failed
+                        var failedEvent = new ComandaEvent.ComandaPlasataFailedEvent(orderError);
+                        Console.WriteLine(failedEvent.Message);
+                        
+                        // Publish failure event
+                        EventBus.Publish(failedEvent);
+                    }
+                    break;
+
                 case 0:
                     SalvareFisiere.SalvareProduseInJson(@"..\..\..\resources\produsemagazin.json", produse);
                     SalvareFisiere.SalvarePersoaneInJson(@"..\..\..\resources\persoane.json", persoane);
+                    Console.WriteLine("Date salvate cu succes!");
                     Environment.Exit(0);
                     break;
+
                 default:
                     Console.WriteLine("Optiune invalida");
                     break;
             }
 
         } while (true);
+    }
+
+    /// <summary>
+    /// Setup EventBus subscriptions for cross-context communication
+    /// </summary>
+    private static void SetupEventBusSubscriptions()
+    {
+        Console.WriteLine("[EVENTBUS] Setting up event subscriptions...\n");
+
+        // Inventory subscribes to cart events
+        EventBus.Subscribe<CartEvents.ProdusAdaugatInCosEvent>(evt =>
+        {
+            Console.WriteLine($"[EVENT] Product added to cart: {evt.NumeProdus}, Stock decreased");
+        });
+
+        EventBus.Subscribe<CartEvents.ProdusStergeDinCosEvent>(evt =>
+        {
+            Console.WriteLine($"[EVENT] Product removed from cart: {evt.NumeProdus}, Stock increased");
+        });
+
+        EventBus.Subscribe<CartEvents.CosGolitEvent>(evt =>
+        {
+            Console.WriteLine($"[EVENT] Cart emptied, {evt.ProduseReturnate.Count} products returned to stock");
+        });
+
+        EventBus.Subscribe<CartEvents.CosPlatitEvent>(evt =>
+        {
+            Console.WriteLine($"[EVENT] Cart paid by {evt.NumePersoana}, Total: {evt.TotalPlatit} lei");
+        });
+
+        // Order management subscribes to cart payment
+        EventBus.Subscribe<CartEvents.CosCreatEvent>(evt =>
+        {
+            Console.WriteLine($"[EVENT] New cart created for {evt.NumePersoana}");
+        });
+
+        // Inventory subscribes to stock events
+        EventBus.Subscribe<InventoryEvents.ProdusEpuizatEvent>(evt =>
+        {
+            Console.WriteLine($"[WARNING] Product {evt.NumeProdus} is OUT OF STOCK!");
+        });
+
+        EventBus.Subscribe<InventoryEvents.ProdusDisponibilEvent>(evt =>
+        {
+            Console.WriteLine($"[INFO] Product {evt.NumeProdus} is now AVAILABLE (Stock: {evt.StocDisponibil})");
+        });
+
+        // Order events
+        EventBus.Subscribe<ComandaEvent.ComandaPlasataSuccessEvent>(evt =>
+        {
+            Console.WriteLine("[EVENT] Order placed successfully: ");
+            Console.WriteLine($"  - Order ID: {evt.ComandaId}");
+            Console.WriteLine($"  - Total: {evt.TotalComanda} lei");
+            Console.WriteLine($"  - Numar produse: {evt.NumarProduse}");
+        });
+
+        EventBus.Subscribe<ComandaEvent.ComandaPlasataFailedEvent>(evt =>
+        {
+            Console.WriteLine($"[EVENT] Order placement failed: {evt.Reason}");
+        });
+
+        Console.WriteLine("[EVENTBUS] Event subscriptions configured!\n");
     }
 }
 
