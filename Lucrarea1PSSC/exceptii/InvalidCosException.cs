@@ -1,20 +1,37 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Lucrarea1PSSC.exceptii
 {
-    internal class InvalidCosException : Exception
+    /// <summary>
+    /// Exception thrown when shopping cart operations fail due to invalid state
+    /// </summary>
+    public class InvalidCosException : Exception
     {
-        public InvalidCosException() { }
+        /// <summary>
+        /// Gets the error code associated with this exception
+        /// </summary>
+        public string? ErrorCode { get; }
+
+        public InvalidCosException() : base("Operatiune invalida asupra cosului de cumparaturi")
+        {
+        }
+
         public InvalidCosException(string? message) : base(message)
         {
         }
 
+        public InvalidCosException(string? message, string errorCode) : base(message)
+        {
+            ErrorCode = errorCode;
+        }
+
         public InvalidCosException(string? message, Exception? innerException) : base(message, innerException)
         {
+        }
+
+        public InvalidCosException(string? message, string errorCode, Exception? innerException) : base(message, innerException)
+        {
+            ErrorCode = errorCode;
         }
     }
 }

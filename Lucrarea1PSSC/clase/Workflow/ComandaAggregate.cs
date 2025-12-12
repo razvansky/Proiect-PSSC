@@ -56,11 +56,11 @@ namespace Lucrarea1PSSC.clase.Workflow
 
             // INVARIANT: Order must have at least one product
             if (_produse.Count == 0)
-                throw new InvalidOperationException("Comanda trebuie s? con?in? cel pu?in un produs");
+                throw new InvalidOperationException("Comanda trebuie sa contina cel putin un produs");
 
             // INVARIANT: Total must be positive
             if (_total <= 0)
-                throw new InvalidOperationException("Totalul comenzii trebuie s? fie pozitiv");
+                throw new InvalidOperationException("Totalul comenzii trebuie sa fie pozitiv");
         }
 
         /// <summary>
@@ -77,25 +77,25 @@ namespace Lucrarea1PSSC.clase.Workflow
 
             // Validate cart
             if (cos == null)
-                return (false, null, "Co?ul nu poate fi null");
+                return (false, null, "Cosul nu poate fi null");
 
             // INVARIANT: Order can only be created from paid cart
             if (cos.GetStareCos() is not PayedCos)
-                return (false, null, "Co?ul trebuie s? fie pl?tit pentru a plasa comanda");
+                return (false, null, "Cosul trebuie sa fie platit pentru a plasa comanda");
 
             // Validate delivery address
             if (persoana.Adress == null || persoana.Adress.adress.Length < 5)
-                return (false, null, "Adresa de livrare este invalid? (minim 5 caractere)");
+                return (false, null, "Adresa de livrare este invalida (minim 5 caractere)");
 
             // Get products from cart
             var produse = cos.GetProduseCos();
             if (produse == null || produse.Count == 0)
-                return (false, null, "Co?ul este gol");
+                return (false, null, "Cosul este gol");
 
             // Calculate total
             var total = cos.TotalCos();
             if (total <= 0)
-                return (false, null, "Totalul comenzii trebuie s? fie pozitiv");
+                return (false, null, "Totalul comenzii trebuie sa fie pozitiv");
 
             // Create order
             try
@@ -136,7 +136,7 @@ namespace Lucrarea1PSSC.clase.Workflow
         public void StartPreparation()
         {
             if (_stare != StaraComanda.Plasata)
-                throw new InvalidOperationException($"Nu se poate începe preg?tirea din starea {_stare}");
+                throw new InvalidOperationException($"Nu se poate incepe pregatirea din starea {_stare}");
 
             _stare = StaraComanda.InPregatire;
         }
