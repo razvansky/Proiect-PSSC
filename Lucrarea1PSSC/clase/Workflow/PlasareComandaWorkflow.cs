@@ -2,8 +2,11 @@
 using Lucrarea1PSSC.clase.ClaseProduse;
 using Lucrarea1PSSC.clase.ClaseGestionarePersoane;
 using Lucrarea1PSSC.clase.Infrastructure.Database;
+using Lucrarea1PSSC.clase.Workflow.Events;
+using Lucrarea1PSSC.clase.Workflow.Orchestration;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 
 public static partial class ComandaEvent
@@ -12,19 +15,23 @@ public static partial class ComandaEvent
 
     public record ComandaPlasataSuccessEvent : IComandaEvent
     {
-        internal ComandaPlasataSuccessEvent(string numePers, double total, int numarProduse, Guid comandaId)
+        internal ComandaPlasataSuccessEvent(string numePers, double total, int numarProduse, Guid comandaId, string? trackingNumber = null)
         {
             NumePersoana = numePers;
             TotalComanda = total;
             NumarProduse = numarProduse;
             ComandaId = comandaId;
+            TrackingNumber = trackingNumber;
         }
 
         public string NumePersoana { get; }
         public double TotalComanda { get; }
         public int NumarProduse { get; }
         public Guid ComandaId { get; }
-        public string Message => $"Comanda a fost plasata cu succes pentru {NumePersoana}. Total: {TotalComanda} lei, Produse: {NumarProduse}";
+        public string? TrackingNumber { get; }
+        public string Message => TrackingNumber != null 
+            ? $"Comanda a fost plasata cu succes pentru {NumePersoana}. Total: {TotalComanda} lei, Produse: {NumarProduse}. Tracking: {TrackingNumber}"
+            : $"Comanda a fost plasata cu succes pentru {NumePersoana}. Total: {TotalComanda} lei, Produse: {NumarProduse}";
     }
 
     public record ComandaPlasataFailedEvent : IComandaEvent
@@ -42,10 +49,14 @@ public static partial class ComandaEvent
 public class PlasareComandaWorkflow
 {
     private readonly OrderWorkflowDatabaseService? _dbService;
+    private readonly OrderProcessingOrchestrator? _orchestrator;
 
-    public PlasareComandaWorkflow(OrderWorkflowDatabaseService? dbService = null)
+    public PlasareComandaWorkflow(
+        OrderWorkflowDatabaseService? dbService = null,
+        OrderProcessingOrchestrator? orchestrator = null)
     {
         _dbService = dbService;
+        _orchestrator = orchestrator;
     }
 
     public async Task<ComandaEvent.IComandaEvent> PlaseazaComandaAsync(
@@ -104,23 +115,44 @@ public class PlasareComandaWorkflow
                 }
 
                 Console.WriteLine("[WORKFLOW] Order saved to database successfully");
-                return new ComandaEvent.ComandaPlasataSuccessEvent(
-                    persoana.Nume.Name,
-                    totalComanda,
-                    numarProduse,
-                    order!.OrderNumber
-                );
+                orderNumber = order!.OrderNumber;
             }
-            else
+
+            // EMIT ORDER PLACED EVENT - triggers invoice generation and delivery initiation
+            if (_orchestrator != null)
             {
-                // Fallback if no database service
-                return new ComandaEvent.ComandaPlasataSuccessEvent(
+                Console.WriteLine("[WORKFLOW] Emitting OrderPlacedEvent...");
+                
+                var orderPlacedEvent = new OrderPlacedEvent(
+                    orderNumber,
                     persoana.Nume.Name,
-                    totalComanda,
+                    persoana.Email.email,
+                    persoana.Adress.adress,
+                    (decimal)totalComanda,
                     numarProduse,
-                    orderNumber
+                    cos.GetProduseCos().Select(p => new OrderItemInfo
+                    {
+                        ProductCode = p.CodProd.Cod,
+                        ProductName = p.Nume,
+                        Quantity = (decimal)p.Cantitate.Cantitate,
+                        UnitPrice = (decimal)p.Price.pret,
+                        LineTotal = (decimal)(p.Price.pret * p.Cantitate.Cantitate)
+                    }).ToList()
                 );
+
+                await _orchestrator.ProcessOrderAsync(orderPlacedEvent);
+                
+                // Note: Tracking number would come from delivery workflow event
+                // For now, we return success without tracking
             }
+
+            return new ComandaEvent.ComandaPlasataSuccessEvent(
+                persoana.Nume.Name,
+                totalComanda,
+                numarProduse,
+                orderNumber,
+                null // Tracking number would be set by event handlers
+            );
         }
         catch (Exception ex)
         {

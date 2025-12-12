@@ -5,32 +5,32 @@ using System.Threading.Tasks;
 using Lucrarea1PSSC.clase.ClaseCos;
 using Lucrarea1PSSC.clase.ClaseProduse;
 using Lucrarea1PSSC.clase.ClaseGestionarePersoane;
-using Lucrarea1PSSC.clase.Infrastructure;
 using Lucrarea1PSSC.clase.Infrastructure.Database;
+using Lucrarea1PSSC.clase.Workflow.Orchestration;
+using Lucrarea1PSSC.api.Services.Delivery;
 using Lucrarea1PSSC.api.DTOs;
 
 namespace Lucrarea1PSSC.api.Services
 {
-    /// <summary>
-    /// Service for managing shopping cart operations via API
-    /// </summary>
     public class CartApiService
     {
-        private readonly OrderWorkflowDatabaseService _dbService;
+        private readonly OrderWorkflowDatabaseService? _dbService;
+        private readonly OrderProcessingOrchestrator? _orchestrator;
         private static List<Produs>? _produse;
         private static List<Persoana>? _persoane;
         private static readonly Dictionary<string, CosDeCumparaturi> _activeCarts = new();
         private static bool _initialized = false;
         private static readonly SemaphoreSlim _initLock = new(1, 1);
 
-        public CartApiService(OrderWorkflowDatabaseService dbService)
+        public CartApiService(
+            OrderWorkflowDatabaseService? dbService = null, 
+            DeliveryApiClient? deliveryClient = null,
+            OrderProcessingOrchestrator? orchestrator = null)
         {
             _dbService = dbService;
+            _orchestrator = orchestrator;
         }
 
-        /// <summary>
-        /// Ensure data is loaded from database
-        /// </summary>
         private async Task EnsureInitializedAsync()
         {
             if (_initialized) return;
@@ -40,10 +40,20 @@ namespace Lucrarea1PSSC.api.Services
             {
                 if (_initialized) return;
 
-                Console.WriteLine("[CartApiService] Loading products and customers from database...");
-                _produse = await _dbService.LoadProductsFromDatabaseAsync();
-                _persoane = await _dbService.LoadCustomersFromDatabaseAsync();
-                Console.WriteLine($"[CartApiService] Loaded {_produse.Count} products and {_persoane.Count} customers");
+                if (_dbService != null)
+                {
+                    Console.WriteLine("[CartApiService] Loading from database...");
+                    _produse = await _dbService.LoadProductsFromDatabaseAsync();
+                    _persoane = await _dbService.LoadCustomersFromDatabaseAsync();
+                    Console.WriteLine($"[CartApiService] Loaded {_produse.Count} products, {_persoane.Count} customers");
+                }
+                else
+                {
+                    Console.WriteLine("[CartApiService] Creating sample data...");
+                    _produse = CreateSampleProducts();
+                    _persoane = CreateSampleCustomers();
+                    Console.WriteLine($"[CartApiService] Created {_produse.Count} products, {_persoane.Count} customers");
+                }
                 
                 _initialized = true;
             }
@@ -53,43 +63,37 @@ namespace Lucrarea1PSSC.api.Services
             }
         }
 
-        /// <summary>
-        /// Get or create cart for customer
-        /// </summary>
+        private static List<Produs> CreateSampleProducts()
+        {
+            return new List<Produs>
+            {
+                new Produs(new CodProdus(1001), "Laptop Dell XPS 15", new UnitQuantity(10), new KilogramQuantity(1.0), new Price(5499.99)),
+                new Produs(new CodProdus(1002), "Mouse Logitech MX Master", new UnitQuantity(50), new KilogramQuantity(1.0), new Price(349.99)),
+                new Produs(new CodProdus(1003), "Keyboard Mechanical RGB", new UnitQuantity(30), new KilogramQuantity(1.0), new Price(599.99)),
+                new Produs(new CodProdus(1004), "Monitor LG 27 4K", new UnitQuantity(15), new KilogramQuantity(1.0), new Price(1899.99)),
+                new Produs(new CodProdus(1005), "Laptop Lenovo ThinkPad", new UnitQuantity(8), new KilogramQuantity(1.0), new Price(4299.99))
+            };
+        }
+
+        private static List<Persoana> CreateSampleCustomers()
+        {
+            return new List<Persoana>
+            {
+                new Persoana(new Nume("Ion Popescu"), new EmailP("ion.popescu@example.com"), new Adress("Str. Mihai Eminescu 15"), new List<CosDeCumparaturi>()),
+                new Persoana(new Nume("Maria Ionescu"), new EmailP("maria.ionescu@example.com"), new Adress("Bulevardul Unirii 1"), new List<CosDeCumparaturi>()),
+                new Persoana(new Nume("Andrei Stanciu"), new EmailP("andrei.stanciu@example.com"), new Adress("Str. Avram Iancu 25"), new List<CosDeCumparaturi>())
+            };
+        }
+
         private CosDeCumparaturi GetOrCreateCart(string customerName)
         {
             if (!_activeCarts.ContainsKey(customerName))
             {
-                var persoana = _persoane!.FirstOrDefault(p => p.Nume.Name == customerName);
-                if (persoana?.CosCurent != null)
-                {
-                    _activeCarts[customerName] = persoana.CosCurent;
-                }
-                else
-                {
-                    _activeCarts[customerName] = new CosDeCumparaturi();
-                    
-                    // Update person with cart
-                    if (persoana != null)
-                    {
-                        var updatedPersoana = persoana.AdaugaCos(_activeCarts[customerName]);
-                        var index = _persoane!.IndexOf(persoana);
-                        _persoane[index] = updatedPersoana;
-
-                        // Publish event
-                        EventBus.Publish(new CartEvents.CosCreatEvent(
-                            customerName,
-                            DateTime.UtcNow
-                        ));
-                    }
-                }
+                _activeCarts[customerName] = new CosDeCumparaturi();
             }
             return _activeCarts[customerName];
         }
 
-        /// <summary>
-        /// View shopping cart
-        /// </summary>
         public async Task<(bool Success, ViewCartResponse? Response, string? Error)> ViewCartAsync(string customerName)
         {
             await EnsureInitializedAsync();
@@ -97,18 +101,13 @@ namespace Lucrarea1PSSC.api.Services
             try
             {
                 if (string.IsNullOrWhiteSpace(customerName))
-                {
                     return (false, null, "Customer name is required");
-                }
 
                 var persoana = _persoane!.FirstOrDefault(p => p.Nume.Name == customerName);
                 if (persoana == null)
-                {
                     return (false, null, $"Customer '{customerName}' not found");
-                }
 
                 var cos = GetOrCreateCart(customerName);
-                var stareCos = cos.GetStareCos();
                 var produseInCos = cos.GetProduseCos() ?? new List<ProdusCos>();
 
                 var items = produseInCos.Select(p => new CartItemDto
@@ -125,7 +124,7 @@ namespace Lucrarea1PSSC.api.Services
                 var response = new ViewCartResponse
                 {
                     CustomerName = customerName,
-                    CartStatus = stareCos switch
+                    CartStatus = cos.GetStareCos() switch
                     {
                         UnvalidatedCos => "Unvalidated",
                         EmptyCos => "Empty",
@@ -143,86 +142,80 @@ namespace Lucrarea1PSSC.api.Services
             }
             catch (Exception ex)
             {
-                return (false, null, $"Error viewing cart: {ex.Message}");
+                return (false, null, $"Error: {ex.Message}");
             }
         }
 
-        /// <summary>
-        /// Add product to cart
-        /// </summary>
-        public async Task<(bool Success, AddProductToCartResponse? Response, string? Error)> AddProductToCartAsync(
-            AddProductToCartRequest request)
+        public async Task<(bool Success, AddProductToCartResponse? Response, string? Error)> AddProductToCartAsync(AddProductToCartRequest request)
         {
             await EnsureInitializedAsync();
             
             try
             {
-                // Validate request
+                Console.WriteLine($"\n????????????????????????????????????????????");
+                Console.WriteLine($"?  ADD PRODUCT TO CART - DIAGNOSTIC        ?");
+                Console.WriteLine($"????????????????????????????????????????????");
+                Console.WriteLine($"[DEBUG] Customer: '{request.CustomerName}'");
+                Console.WriteLine($"[DEBUG] Product: '{request.ProductName}'");
+                Console.WriteLine($"[DEBUG] Quantity: {request.Quantity}");
+                
                 if (string.IsNullOrWhiteSpace(request.CustomerName))
-                {
                     return (false, null, "Customer name is required");
-                }
-
                 if (string.IsNullOrWhiteSpace(request.ProductName))
-                {
                     return (false, null, "Product name is required");
+
+                Console.WriteLine($"\n[DEBUG] Products in memory: {_produse!.Count}");
+                foreach (var p in _produse!)
+                {
+                    Console.WriteLine($"  - '{p.Nume}' (Code: {p.CodProdus.Cod}, Stock: {p.Quantity.Cantitate})");
                 }
 
-                // Validate customer exists
                 var persoana = _persoane!.FirstOrDefault(p => p.Nume.Name == request.CustomerName);
                 if (persoana == null)
                 {
+                    Console.WriteLine($"[DEBUG] ? Customer not found!");
                     return (false, null, $"Customer '{request.CustomerName}' not found");
                 }
+                Console.WriteLine($"[DEBUG] ? Customer found: {persoana.Nume.Name}");
 
-                // Verify product exists in database
-                var (productExists, dbProduct) = await _dbService.VerifyProductExistsAsync(request.ProductName);
-                if (!productExists)
-                {
-                    return (false, null, $"Product '{request.ProductName}' not found in database");
-                }
-
-                // Check stock availability
-                var (hasStock, availableStock) = await _dbService.CheckProductStockAsync(
-                    dbProduct!.Code,
-                    request.Quantity);
-
-                if (!hasStock)
-                {
-                    return (false, null, 
-                        $"Insufficient stock for '{request.ProductName}'. Available: {availableStock}");
-                }
-
-                // Get or create cart
                 var cos = GetOrCreateCart(request.CustomerName);
-
-                // Add product to cart
+                Console.WriteLine($"[DEBUG] Cart state before add: {cos.GetStareCos().GetType().Name}");
+                Console.WriteLine($"[DEBUG] Items in cart before: {cos.GetProduseCos().Count}");
+                
+                Console.WriteLine($"\n[DEBUG] Calling AdaugaProdus with:");
+                Console.WriteLine($"  - Product name: '{request.ProductName}'");
+                Console.WriteLine($"  - Product list count: {_produse!.Count}");
+                
+                // CRITICAL: AdaugaProdus modifies the list, so pass it
                 cos.AdaugaProdus(request.ProductName, _produse!);
+                
+                Console.WriteLine($"[DEBUG] Items in cart after: {cos.GetProduseCos().Count}");
+                
+                // Check if product was actually added
+                var produseInCos = cos.GetProduseCos();
+                if (produseInCos.Count == 0)
+                {
+                    Console.WriteLine($"[DEBUG] ? Product was NOT added to cart!");
+                    return (false, null, "Product was not added to cart - check console for errors");
+                }
 
-                // Find added product
-                var produsAdaugat = _produse!.FirstOrDefault(p => p.Nume == request.ProductName);
+                var produsAdaugat = produseInCos.LastOrDefault();
                 if (produsAdaugat == null)
                 {
-                    return (false, null, "Product not found in inventory");
+                    Console.WriteLine($"[DEBUG] ? Could not find added product in cart");
+                    return (false, null, "Product not found after adding");
                 }
 
-                // Publish event
-                EventBus.Publish(new CartEvents.ProdusAdaugatInCosEvent(
-                    produsAdaugat.Nume,
-                    produsAdaugat.CodProdus.Cod,
-                    1,
-                    produsAdaugat.Pret.pret,
-                    DateTime.UtcNow
-                ));
+                Console.WriteLine($"[DEBUG] ? Product added: {produsAdaugat.Nume}");
+                Console.WriteLine($"[DEBUG] Cart total: {cos.TotalCos()} RON");
 
-                // Create response
                 var addedItem = new CartItemDto
                 {
-                    ProductCode = produsAdaugat.CodProdus.Cod,
+                    ProductCode = produsAdaugat.CodProd.Cod,
                     ProductName = produsAdaugat.Nume,
-                    Quantity = 1,
-                    UnitPrice = Convert.ToDecimal(produsAdaugat.Pret.pret),
-                    LineTotal = Convert.ToDecimal(produsAdaugat.Pret.pret),
+                    Quantity = (decimal)produsAdaugat.Cantitate.Cantitate,
+                    UnitPrice = Convert.ToDecimal(produsAdaugat.Price.pret),
+                    LineTotal = Convert.ToDecimal(produsAdaugat.Price.pret * produsAdaugat.Cantitate.Cantitate),
                     QuantityType = "Unit",
                     KilogramQuantity = produsAdaugat.Kilogram.CantitateKilogram
                 };
@@ -230,98 +223,107 @@ namespace Lucrarea1PSSC.api.Services
                 var response = new AddProductToCartResponse
                 {
                     Success = true,
-                    Message = $"Product '{request.ProductName}' added to cart successfully",
+                    Message = $"Product '{request.ProductName}' added successfully",
                     AddedItem = addedItem,
                     NewCartTotal = Convert.ToDecimal(cos.TotalCos()),
-                    TotalItems = cos.GetProduseCos().Count
+                    TotalItems = produseInCos.Count
                 };
+
+                Console.WriteLine($"????????????????????????????????????????????\n");
 
                 return (true, response, null);
             }
             catch (Exception ex)
             {
-                return (false, null, $"Error adding product to cart: {ex.Message}");
+                Console.WriteLine($"[DEBUG] ? Exception: {ex.Message}");
+                Console.WriteLine($"[DEBUG] Stack: {ex.StackTrace}");
+                return (false, null, $"Error: {ex.Message}");
             }
         }
 
-        /// <summary>
-        /// Mark cart as paid
-        /// </summary>
-        public async Task<(bool Success, MarkCartAsPaidResponse? Response, string? Error)> MarkCartAsPaidAsync(
-            MarkCartAsPaidRequest request)
+        public async Task<(bool Success, MarkCartAsPaidResponse? Response, string? Error)> MarkCartAsPaidAsync(MarkCartAsPaidRequest request)
         {
             await EnsureInitializedAsync();
             
             try
             {
-                // Validate request
                 if (string.IsNullOrWhiteSpace(request.CustomerName))
-                {
                     return (false, null, "Customer name is required");
-                }
 
-                // Validate customer exists
                 var persoana = _persoane!.FirstOrDefault(p => p.Nume.Name == request.CustomerName);
                 if (persoana == null)
-                {
                     return (false, null, $"Customer '{request.CustomerName}' not found");
-                }
 
-                // Get cart
                 if (!_activeCarts.ContainsKey(request.CustomerName))
-                {
-                    return (false, null, "No active cart found for customer");
-                }
+                    return (false, null, "No active cart found");
 
                 var cos = _activeCarts[request.CustomerName];
-
-                // Validate cart state
                 var stareCos = cos.GetStareCos();
+
                 if (stareCos is PayedCos)
-                {
                     return (false, null, "Cart is already paid");
-                }
-
-                if (stareCos is UnvalidatedCos)
-                {
-                    return (false, null, "Cart is not validated");
-                }
-
                 if (stareCos is EmptyCos)
-                {
-                    return (false, null, "Cart is empty. Add products before payment");
-                }
+                    return (false, null, "Cart is empty");
 
-                // Get cart details before payment
                 var totalAmount = cos.TotalCos();
                 var itemCount = cos.GetProduseCos().Count;
 
-                // Process payment
                 bool paymentSuccess = cos.platesteCos();
-
                 if (!paymentSuccess)
+                    return (false, null, "Payment failed");
+
+                // TRIGGER ORDER WORKFLOW WITH ORCHESTRATOR
+                if (_orchestrator != null && _dbService != null)
                 {
-                    return (false, null, "Payment failed. Please try again");
+                    try
+                    {
+                        Console.WriteLine("[CartApiService] Triggering order workflow with event orchestration...");
+                        
+                        var workflow = new PlasareComandaWorkflow(_dbService, _orchestrator);
+                        var orderResult = await workflow.PlaseazaComandaAsync(persoana, cos, _produse!);
+                        
+                        if (orderResult is ComandaEvent.ComandaPlasataSuccessEvent successEvent)
+                        {
+                            Console.WriteLine($"[CartApiService] ? Order processed successfully");
+                        }
+                        else if (orderResult is ComandaEvent.ComandaPlasataFailedEvent failedEvent)
+                        {
+                            Console.WriteLine($"[CartApiService] ?? Order processing failed: {failedEvent.Reason}");
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"[CartApiService] ?? Order workflow error: {ex.Message}");
+                    }
+                }
+                else if (_orchestrator != null)
+                {
+                    // Even without database, we can trigger the orchestrator
+                    try
+                    {
+                        Console.WriteLine("[CartApiService] Triggering order workflow (no database)...");
+                        
+                        var workflow = new PlasareComandaWorkflow(null, _orchestrator);
+                        var orderResult = await workflow.PlaseazaComandaAsync(persoana, cos, _produse!);
+                        
+                        if (orderResult is ComandaEvent.ComandaPlasataSuccessEvent successEvent)
+                        {
+                            Console.WriteLine($"[CartApiService] ? Order processed successfully");
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"[CartApiService] ?? Order workflow error: {ex.Message}");
+                    }
                 }
 
-                var paymentDate = DateTime.UtcNow;
-
-                // Publish event
-                EventBus.Publish(new CartEvents.CosPlatitEvent(
-                    request.CustomerName,
-                    totalAmount,
-                    itemCount,
-                    paymentDate
-                ));
-
-                // Create response
                 var response = new MarkCartAsPaidResponse
                 {
                     Success = true,
-                    Message = $"Cart paid successfully for {request.CustomerName}",
+                    Message = $"Cart paid successfully for {request.CustomerName}. Invoice and delivery initiated.",
                     TotalPaid = Convert.ToDecimal(totalAmount),
                     ItemsPaid = itemCount,
-                    PaymentDate = paymentDate,
+                    PaymentDate = DateTime.UtcNow,
                     TransactionId = request.TransactionId ?? Guid.NewGuid().ToString()
                 };
 
@@ -329,13 +331,10 @@ namespace Lucrarea1PSSC.api.Services
             }
             catch (Exception ex)
             {
-                return (false, null, $"Error processing payment: {ex.Message}");
+                return (false, null, $"Error: {ex.Message}");
             }
         }
 
-        /// <summary>
-        /// Get all active carts (for admin/debugging)
-        /// </summary>
         public async Task<Dictionary<string, string>> GetActiveCartsStatusAsync()
         {
             await EnsureInitializedAsync();

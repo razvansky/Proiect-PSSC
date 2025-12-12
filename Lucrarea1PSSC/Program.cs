@@ -1,25 +1,16 @@
-using Lucrarea1PSSC.clase.ClaseCos;
-using Lucrarea1PSSC.clase.ClaseProduse;
-using Lucrarea1PSSC.clase.ClaseGestionarePersoane;
-using Lucrarea1PSSC.clase.Infrastructure;
 using Lucrarea1PSSC.clase.Infrastructure.Database;
+using Lucrarea1PSSC.clase.Workflow.Orchestration;
 using Lucrarea1PSSC.api.Services;
+using Lucrarea1PSSC.api.Services.Delivery;
+using Microsoft.EntityFrameworkCore;
+using Polly;
+using Polly.Extensions.Http;
+using System.Net.Http;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Configuration
-builder.Configuration
-    .SetBasePath(AppContext.BaseDirectory)
-    .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true);
-
-var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
-if (string.IsNullOrEmpty(connectionString))
-{
-    throw new InvalidOperationException(
-        "Connection string 'DefaultConnection' not found in appsettings.json");
-}
-
-Console.WriteLine($"[CONFIG] Connection String: {connectionString}");
+// Load configuration from resources folder
+builder.Configuration.AddJsonFile("resources/appsettings.json", optional: true, reloadOnChange: true);
 
 // Add services to the container
 builder.Services.AddControllers();
@@ -28,35 +19,9 @@ builder.Services.AddSwaggerGen(c =>
 {
     c.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo
     {
-        Title = "?? E-Commerce Shopping Cart API",
+        Title = "E-Commerce Shopping Cart API",
         Version = "v1.0",
-        Description = @"
-## Welcome to the E-Commerce Cart API! ??
-
-A modern **REST API** for managing shopping carts, built with:
-- ? **Domain-Driven Design (DDD)** principles
-- ?? **Event-Driven Architecture** for real-time updates
-- ?? **SQL Server** integration with full persistence
-- ?? **Type-safe** operations with comprehensive validation
-
-### Features
-- ??? **Cart Management**: Create, view, and manage shopping carts
-- ?? **Product Operations**: Add/remove products with stock validation
-- ?? **Payment Processing**: Secure cart payment with transaction tracking
-- ?? **Real-time Events**: Domain events for all cart operations
-- ?? **Clean Architecture**: Separation of concerns with DDD patterns
-
-### Quick Start
-1. Use the **View Cart** endpoint to see a customer's current cart
-2. **Add products** to the cart - stock is validated automatically
-3. **Mark as paid** when checkout is complete
-
-### Database
-Connected to SQL Server with 10 sample products and 5 test customers ready to use!
-
----
-*Built with ?? using .NET 9 and Entity Framework Core*
-        ",
+        Description = "Modern REST API with Event-Driven Architecture, Message Queues, and Workflows",
         Contact = new Microsoft.OpenApi.Models.OpenApiContact
         {
             Name = "E-Commerce Development Team",
@@ -70,7 +35,6 @@ Connected to SQL Server with 10 sample products and 5 test customers ready to us
         }
     });
 
-    // Add XML comments if available
     var xmlFile = $"{System.Reflection.Assembly.GetExecutingAssembly().GetName().Name}.xml";
     var xmlPath = System.IO.Path.Combine(AppContext.BaseDirectory, xmlFile);
     if (System.IO.File.Exists(xmlPath))
@@ -78,70 +42,72 @@ Connected to SQL Server with 10 sample products and 5 test customers ready to us
         c.IncludeXmlComments(xmlPath);
     }
 
-    // Add tags with descriptions
-    c.TagActionsBy(api =>
-    {
-        if (api.GroupName != null)
-        {
-            return new[] { api.GroupName };
-        }
-
-        if (api.ActionDescriptor is Microsoft.AspNetCore.Mvc.Controllers.ControllerActionDescriptor controllerActionDescriptor)
-        {
-            return new[] { controllerActionDescriptor.ControllerName };
-        }
-
-        throw new InvalidOperationException("Unable to determine tag for endpoint.");
-    });
-
-    c.DocInclusionPredicate((name, api) => true);
-
-    // Add examples
     c.EnableAnnotations();
 });
 
-// Add database services
-builder.Services.AddECommerceDatabase(connectionString);
-
-// Add CORS
-builder.Services.AddCors(options =>
+// Database Configuration
+var connectionString = builder.Configuration.GetConnectionString("ECommerceDB");
+if (!string.IsNullOrEmpty(connectionString))
 {
-    options.AddPolicy("AllowAll", policy =>
-    {
-        policy.AllowAnyOrigin()
-              .AllowAnyMethod()
-              .AllowAnyHeader();
-    });
+    Console.WriteLine("[STARTUP] Configuring database connection...");
+    
+    builder.Services.AddDbContext<ECommerceDbContext>(options =>
+        options.UseSqlServer(connectionString));
+    
+    builder.Services.AddScoped<UnitOfWork>();
+    builder.Services.AddScoped<OrderWorkflowDatabaseService>();
+    
+    Console.WriteLine("[STARTUP] Database services configured");
+}
+else
+{
+    Console.WriteLine("[STARTUP] No database connection string found - running in memory mode");
+}
+
+// Configure Delivery API HttpClient with Polly Retry Policy
+builder.Services.AddHttpClient<DeliveryApiClient>(client =>
+{
+    client.BaseAddress = new Uri("http://localhost:5000");
+    client.Timeout = TimeSpan.FromSeconds(30);
+    client.DefaultRequestHeaders.Add("Accept", "application/json");
+    client.DefaultRequestHeaders.Add("User-Agent", "ECommerceCartAPI/1.0");
+})
+.AddPolicyHandler(GetRetryPolicy())
+.AddPolicyHandler(GetCircuitBreakerPolicy());
+
+Console.WriteLine("[STARTUP] Delivery API client configured with retry policy (3 retries, exponential backoff)");
+
+// Register Order Processing Orchestrator as Singleton (message bus should be singleton)
+builder.Services.AddSingleton<OrderProcessingOrchestrator>(serviceProvider =>
+{
+    var deliveryClient = serviceProvider.GetService<DeliveryApiClient>();
+    return new OrderProcessingOrchestrator(deliveryClient);
 });
 
-// Register CartApiService as scoped (will be initialized on first request)
-builder.Services.AddScoped<CartApiService>();
+Console.WriteLine("[STARTUP] Order Processing Orchestrator registered");
+
+// Register Cart API Service (works with or without database)
+builder.Services.AddScoped<CartApiService>(serviceProvider =>
+{
+    var dbService = serviceProvider.GetService<OrderWorkflowDatabaseService>();
+    var deliveryClient = serviceProvider.GetService<DeliveryApiClient>();
+    var orchestrator = serviceProvider.GetService<OrderProcessingOrchestrator>();
+    return new CartApiService(dbService, deliveryClient, orchestrator);
+});
+
+Console.WriteLine("[STARTUP] Cart API Service registered");
 
 var app = builder.Build();
 
-// Initialize database
-Console.WriteLine("[DATABASE] Initializing database...");
-try
-{
-    using (var scope = app.Services.CreateScope())
-    {
-        var services = scope.ServiceProvider;
-        
-        await services.InitializeDatabaseAsync();
-        await services.SeedDatabaseAsync();
-        Console.WriteLine("[DATABASE] Database initialized successfully!");
-    }
-}
-catch (Exception ex)
-{
-    Console.WriteLine($"[CRITICAL ERROR] Database initialization failed: {ex.Message}");
-    Console.WriteLine($"[INFO] Please ensure SQL Server is running and accessible.");
-    Console.WriteLine($"[DEBUG] Inner exception: {ex.InnerException?.Message}");
-    throw;
-}
+// Demonstrate message queue patterns
+Console.WriteLine("\n????????????????????????????????????????????????????????????????");
+Console.WriteLine("  DEMONSTRATING MESSAGE QUEUE PATTERNS");
+Console.WriteLine("????????????????????????????????????????????????????????????????\n");
 
-// Setup event bus
-SetupEventBusSubscriptions();
+await SimpleQueueExample.DemonstrateQueue();
+await TopicExample.DemonstrateTopic();
+
+Console.WriteLine("????????????????????????????????????????????????????????????????\n");
 
 // Configure the HTTP request pipeline
 if (app.Environment.IsDevelopment())
@@ -150,101 +116,59 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI(c =>
     {
         c.SwaggerEndpoint("/swagger/v1/swagger.json", "E-Commerce Cart API v1");
-        c.RoutePrefix = string.Empty; // Serve Swagger UI at root
-        
-        // Custom styling
+        c.RoutePrefix = string.Empty;
         c.InjectStylesheet("/swagger-custom.css");
-        
-        // Display request duration
         c.DisplayRequestDuration();
-        
-        // Enable deep linking
         c.EnableDeepLinking();
-        
-        // Enable filter
         c.EnableFilter();
-        
-        // Show extensions
         c.ShowExtensions();
-        
-        // Enable validator
         c.EnableValidator();
-        
-        // Default models expand depth
         c.DefaultModelsExpandDepth(2);
-        
-        // Default model expand depth
         c.DefaultModelExpandDepth(2);
-        
-        // Document title
-        c.DocumentTitle = "?? E-Commerce Cart API - Interactive Documentation";
-        
-        // Custom CSS for additional tweaks
+        c.DocumentTitle = "E-Commerce Cart API - Interactive Documentation";
         c.InjectJavascript("/swagger-custom.js");
     });
 }
 
-// Serve static files for custom CSS/JS
 app.UseStaticFiles();
-
-app.UseCors("AllowAll");
-app.UseHttpsRedirection();
 app.UseAuthorization();
 app.MapControllers();
 
-Console.WriteLine("\n=== E-Commerce Shopping Cart API ===");
-Console.WriteLine("Event-Driven Architecture with DDD");
-Console.WriteLine("Database-Integrated Workflow\n");
-Console.WriteLine("API Endpoints:");
-Console.WriteLine("  GET    /api/cart/view/{customerName}");
-Console.WriteLine("  POST   /api/cart/add-product");
-Console.WriteLine("  POST   /api/cart/mark-paid");
-Console.WriteLine("  GET    /api/cart/active-carts");
-Console.WriteLine("  GET    /api/cart/health");
-Console.WriteLine("\nSwagger UI available at: http://localhost:5000 or https://localhost:5001");
-Console.WriteLine("\nPress Ctrl+C to stop the server\n");
+Console.WriteLine("[STARTUP] E-Commerce Cart API is starting...");
+Console.WriteLine("[STARTUP] Swagger UI available at: http://localhost:5000");
+Console.WriteLine("[STARTUP] Event-Driven Architecture with Message Queues enabled");
 
 app.Run();
 
-// Setup EventBus subscriptions for cross-context communication
-static void SetupEventBusSubscriptions()
+// Polly Retry Policy: 3 retries with exponential backoff
+static IAsyncPolicy<HttpResponseMessage> GetRetryPolicy()
 {
-    Console.WriteLine("[EVENTBUS] Setting up event subscriptions...");
+    return HttpPolicyExtensions
+        .HandleTransientHttpError()
+        .OrResult(msg => (int)msg.StatusCode == 500)
+        .WaitAndRetryAsync(
+            retryCount: 3,
+            sleepDurationProvider: retryAttempt => TimeSpan.FromSeconds(Math.Pow(2, retryAttempt)),
+            onRetry: (outcome, timespan, retryCount, context) =>
+            {
+                Console.WriteLine($"[POLLY RETRY] Attempt {retryCount} after {timespan.TotalSeconds}s delay");
+            });
+}
 
-    EventBus.Subscribe<CartEvents.ProdusAdaugatInCosEvent>(evt =>
-    {
-        Console.WriteLine($"[EVENT] Product added to cart: {evt.NumeProdus}, Stock decreased");
-    });
-
-    EventBus.Subscribe<CartEvents.ProdusStergeDinCosEvent>(evt =>
-    {
-        Console.WriteLine($"[EVENT] Product removed from cart: {evt.NumeProdus}, Stock increased");
-    });
-
-    EventBus.Subscribe<CartEvents.CosGolitEvent>(evt =>
-    {
-        Console.WriteLine($"[EVENT] Cart emptied, {evt.ProduseReturnate.Count} products returned to stock");
-    });
-
-    EventBus.Subscribe<CartEvents.CosPlatitEvent>(evt =>
-    {
-        Console.WriteLine($"[EVENT] Cart paid by {evt.NumePersoana}, Total: {evt.TotalPlatit} lei");
-    });
-
-    EventBus.Subscribe<CartEvents.CosCreatEvent>(evt =>
-    {
-        Console.WriteLine($"[EVENT] New cart created for {evt.NumePersoana}");
-    });
-
-    EventBus.Subscribe<InventoryEvents.ProdusEpuizatEvent>(evt =>
-    {
-        Console.WriteLine($"[WARNING] Product {evt.NumeProdus} is OUT OF STOCK!");
-    });
-
-    EventBus.Subscribe<InventoryEvents.ProdusDisponibilEvent>(evt =>
-    {
-        Console.WriteLine($"[INFO] Product {evt.NumeProdus} is now AVAILABLE (Stock: {evt.StocDisponibil})");
-    });
-
-    Console.WriteLine("[EVENTBUS] Event subscriptions configured!\n");
+// Circuit Breaker Policy: Opens after 5 consecutive failures
+static IAsyncPolicy<HttpResponseMessage> GetCircuitBreakerPolicy()
+{
+    return HttpPolicyExtensions
+        .HandleTransientHttpError()
+        .CircuitBreakerAsync(
+            handledEventsAllowedBeforeBreaking: 5,
+            durationOfBreak: TimeSpan.FromSeconds(30),
+            onBreak: (outcome, duration) =>
+            {
+                Console.WriteLine($"[POLLY CIRCUIT BREAKER] Circuit opened for {duration.TotalSeconds}s");
+            },
+            onReset: () =>
+            {
+                Console.WriteLine("[POLLY CIRCUIT BREAKER] Circuit reset - service is healthy again");
+            });
 }

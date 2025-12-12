@@ -72,7 +72,8 @@ namespace Lucrarea1PSSC.api.DTOs
         public decimal TotalPaid { get; init; }
         public int ItemsPaid { get; init; }
         public DateTime PaymentDate { get; init; }
-        public string? TransactionId { get; init; }
+        public string TransactionId { get; init; } = string.Empty;
+        public string? TrackingNumber { get; init; }
     }
 
     /// <summary>
