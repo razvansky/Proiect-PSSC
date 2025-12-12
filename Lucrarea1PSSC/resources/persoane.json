@@ -66,6 +66,53 @@
             "pret": 15.5
           }
         ]
+      },
+      {
+        "produse_cos": [
+          {
+            "CodProdus": 1,
+            "nume": "Dero",
+            "cantitate": 1,
+            "kilogram": 20,
+            "pret": 15.5
+          }
+        ]
+      },
+      {
+        "produse_cos": [
+          {
+            "CodProdus": 1,
+            "nume": "Dero",
+            "cantitate": 1,
+            "kilogram": 20,
+            "pret": 15.5
+          },
+          {
+            "CodProdus": 3,
+            "nume": "Apa",
+            "cantitate": 1,
+            "kilogram": 2,
+            "pret": 1
+          }
+        ]
+      },
+      {
+        "produse_cos": [
+          {
+            "CodProdus": 3,
+            "nume": "Apa",
+            "cantitate": 1,
+            "kilogram": 2,
+            "pret": 1
+          },
+          {
+            "CodProdus": 4,
+            "nume": "Mop",
+            "cantitate": 1,
+            "kilogram": 10.5,
+            "pret": 25
+          }
+        ]
       }
     ]
   },

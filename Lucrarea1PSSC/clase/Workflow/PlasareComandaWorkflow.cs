@@ -1,54 +1,208 @@
 ﻿using Lucrarea1PSSC.clase.ClaseCos;
 using Lucrarea1PSSC.clase.ClaseProduse;
 using Lucrarea1PSSC.clase.ClaseGestionarePersoane;
+using Lucrarea1PSSC.clase.Infrastructure.Database;
+using Lucrarea1PSSC.clase.Workflow.Events;
+using Lucrarea1PSSC.clase.Workflow.Orchestration;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 
-public class ComandaEvent
+public static partial class ComandaEvent
 {
-    public bool Success { get; }
-    public string Message { get; }
+    public interface IComandaEvent { }
 
-    public ComandaEvent(bool success, string message)
+    public record ComandaPlasataSuccessEvent : IComandaEvent
     {
-        Success = success;
-        Message = message;
+        internal ComandaPlasataSuccessEvent(string numePers, double total, int numarProduse, Guid comandaId, string? trackingNumber = null)
+        {
+            NumePersoana = numePers;
+            TotalComanda = total;
+            NumarProduse = numarProduse;
+            ComandaId = comandaId;
+            TrackingNumber = trackingNumber;
+        }
+
+        public string NumePersoana { get; }
+        public double TotalComanda { get; }
+        public int NumarProduse { get; }
+        public Guid ComandaId { get; }
+        public string? TrackingNumber { get; }
+        public string Message => TrackingNumber != null 
+            ? $"Comanda a fost plasata cu succes pentru {NumePersoana}. Total: {TotalComanda} lei, Produse: {NumarProduse}. Tracking: {TrackingNumber}"
+            : $"Comanda a fost plasata cu succes pentru {NumePersoana}. Total: {TotalComanda} lei, Produse: {NumarProduse}";
+    }
+
+    public record ComandaPlasataFailedEvent : IComandaEvent
+    {
+        internal ComandaPlasataFailedEvent(string reason)
+        {
+            Reason = reason;
+        }
+
+        public string Reason { get; }
+        public string Message => $"Comanda nu a putut fi plasata: {Reason}";
     }
 }
 
-public static class PlasareComandaWorkflow
+public class PlasareComandaWorkflow
 {
-    public static ComandaEvent PlaseazaComanda(Persoana persoana, CosDeCumparaturi cosx)
+    private readonly OrderWorkflowDatabaseService? _dbService;
+    private readonly OrderProcessingOrchestrator? _orchestrator;
+
+    public PlasareComandaWorkflow(
+        OrderWorkflowDatabaseService? dbService = null,
+        OrderProcessingOrchestrator? orchestrator = null)
     {
-        // 1. Validare date intrare
-        if (persoana == null || cosx == null )
-            return new ComandaEvent(false, "Datele de intrare nu sunt valide.");
+        _dbService = dbService;
+        _orchestrator = orchestrator;
+    }
 
-        // 4. Verificare adresa livrare
-        if (persoana.Adress.adress.Length < 5) // exemplu simplu
-            return new ComandaEvent(false, "Adresa de livrare invalida.");
+    public async Task<ComandaEvent.IComandaEvent> PlaseazaComandaAsync(
+        Persoana persoana, 
+        CosDeCumparaturi cos,
+        List<Produs> produse)
+    {
+        // Validare date intrare
+        if (persoana == null || cos == null)
+            return new ComandaEvent.ComandaPlasataFailedEvent("Datele de intrare nu sunt valide.");
 
-     switch(cosx.GetStareCos())
+        // Verificare adresa livrare
+        if (persoana.Adress.adress.Length < 5)
+            return new ComandaEvent.ComandaPlasataFailedEvent("Adresa de livrare invalida.");
+
+        // Verificare stare cos
+        var stareCos = cos.GetStareCos();
+
+        return stareCos switch
         {
-            case UnvalidatedCos:
-                return new ComandaEvent(false, "Cosul este invalid, generati un cos nou");
-            case EmptyCos:
-                return new ComandaEvent(false, "Cosul este gol, adaugati produse in cos");
-            case ValidatedCos:
-                return new ComandaEvent(false, "Cosul nu este platit, platiti cosul inainte de a plasa comanda");
-                break;
-            case PayedCos:
-                // 5. Procesare comanda
-                return new ComandaEvent(true, "Comanda a fost plasata cu succes.");
-            default:
-                return new ComandaEvent(false, "Stare cos necunoscuta.");
+            UnvalidatedCos => new ComandaEvent.ComandaPlasataFailedEvent("Cosul este invalid, generati un cos nou"),
+            EmptyCos => new ComandaEvent.ComandaPlasataFailedEvent("Cosul este gol, adaugati produse in cos"),
+            ValidatedCos => new ComandaEvent.ComandaPlasataFailedEvent("Cosul nu este platit, platiti cosul inainte de a plasa comanda"),
+            PayedCos => await ProcessareComandaAsync(persoana, cos, produse),
+            _ => new ComandaEvent.ComandaPlasataFailedEvent("Stare cos necunoscuta.")
+        };
+    }
+
+    private async Task<ComandaEvent.IComandaEvent> ProcessareComandaAsync(
+        Persoana persoana, 
+        CosDeCumparaturi cos,
+        List<Produs> produse)
+    {
+        try
+        {
+            var totalComanda = cos.TotalCos();
+            var numarProduse = cos.GetProduseCos().Count;
+            var orderNumber = Guid.NewGuid();
+
+            // Save to database if service is available
+            if (_dbService != null)
+            {
+                Console.WriteLine("[WORKFLOW] Saving order to database...");
+                var (success, order, error) = await _dbService.PlaceOrderInDatabaseAsync(
+                    orderNumber,
+                    persoana,
+                    cos,
+                    produse
+                );
+
+                if (!success)
+                {
+                    return new ComandaEvent.ComandaPlasataFailedEvent(
+                        error ?? "Failed to save order to database"
+                    );
+                }
+
+                Console.WriteLine("[WORKFLOW] Order saved to database successfully");
+                orderNumber = order!.OrderNumber;
+            }
+
+            // EMIT ORDER PLACED EVENT - triggers invoice generation and delivery initiation
+            if (_orchestrator != null)
+            {
+                Console.WriteLine("[WORKFLOW] Emitting OrderPlacedEvent...");
+                
+                var orderPlacedEvent = new OrderPlacedEvent(
+                    orderNumber,
+                    persoana.Nume.Name,
+                    persoana.Email.email,
+                    persoana.Adress.adress,
+                    (decimal)totalComanda,
+                    numarProduse,
+                    cos.GetProduseCos().Select(p => new OrderItemInfo
+                    {
+                        ProductCode = p.CodProd.Cod,
+                        ProductName = p.Nume,
+                        Quantity = (decimal)p.Cantitate.Cantitate,
+                        UnitPrice = (decimal)p.Price.pret,
+                        LineTotal = (decimal)(p.Price.pret * p.Cantitate.Cantitate)
+                    }).ToList()
+                );
+
+                await _orchestrator.ProcessOrderAsync(orderPlacedEvent);
+                
+                // Note: Tracking number would come from delivery workflow event
+                // For now, we return success without tracking
+            }
+
+            return new ComandaEvent.ComandaPlasataSuccessEvent(
+                persoana.Nume.Name,
+                totalComanda,
+                numarProduse,
+                orderNumber,
+                null // Tracking number would be set by event handlers
+            );
         }
+        catch (Exception ex)
+        {
+            return new ComandaEvent.ComandaPlasataFailedEvent($"Eroare la procesarea comenzii: {ex.Message}");
+        }
+    }
 
-    
-          
+    /// <summary>
+    /// Synchronous wrapper for compatibility
+    /// </summary>
+    public static ComandaEvent.IComandaEvent PlaseazaComanda(Persoana persoana, CosDeCumparaturi cos)
+    {
+        // Validare date intrare
+        if (persoana == null || cos == null)
+            return new ComandaEvent.ComandaPlasataFailedEvent("Datele de intrare nu sunt valide.");
 
-        // 6. Finalizare workflow
-        // (aici poți adăuga produsul în cos, scădea stocul etc.)
+        // Verificare adresa livrare
+        if (persoana.Adress.adress.Length < 5)
+            return new ComandaEvent.ComandaPlasataFailedEvent("Adresa de livrare invalida.");
 
-      
-      
+        // Verificare stare cos
+        var stareCos = cos.GetStareCos();
+
+        return stareCos switch
+        {
+            UnvalidatedCos => new ComandaEvent.ComandaPlasataFailedEvent("Cosul este invalid, generati un cos nou"),
+            EmptyCos => new ComandaEvent.ComandaPlasataFailedEvent("Cosul este gol, adaugati produse in cos"),
+            ValidatedCos => new ComandaEvent.ComandaPlasataFailedEvent("Cosul nu este platit, platiti cosul inainte de a plasa comanda"),
+            PayedCos => ProcessareComandaSync(persoana, cos),
+            _ => new ComandaEvent.ComandaPlasataFailedEvent("Stare cos necunoscuta.")
+        };
+    }
+
+    private static ComandaEvent.IComandaEvent ProcessareComandaSync(Persoana persoana, CosDeCumparaturi cos)
+    {
+        try
+        {
+            var totalComanda = cos.TotalCos();
+            var numarProduse = cos.GetProduseCos().Count;
+
+            return new ComandaEvent.ComandaPlasataSuccessEvent(
+                persoana.Nume.Name,
+                totalComanda,
+                numarProduse,
+                Guid.NewGuid()
+            );
+        }
+        catch (Exception ex)
+        {
+            return new ComandaEvent.ComandaPlasataFailedEvent($"Eroare la procesarea comenzii: {ex.Message}");
+        }
     }
 }
