@@ -11,6 +11,19 @@ using System.Net.Http;
 
 var builder = WebApplication.CreateBuilder(args);
 
+builder.WebHost.ConfigureKestrel(options =>
+{
+    // Azure App Service sets PORT (commonly 8080). Fall back to 8080.
+    var portValue = Environment.GetEnvironmentVariable("PORT")
+                   ?? Environment.GetEnvironmentVariable("WEBSITES_PORT")
+                   ?? "8080";
+
+    if (!int.TryParse(portValue, out var port))
+        port = 8080;
+
+    options.ListenAnyIP(port);
+});
+
 // Load configuration from resources folder
 builder.Configuration.AddJsonFile("resources/appsettings.json", optional: true, reloadOnChange: true);
 
@@ -48,13 +61,13 @@ builder.Services.AddSwaggerGen(c =>
 });
 
 // Database Configuration
-var connectionString = builder.Configuration.GetConnectionString("ECommerceDB");
+var connectionString = builder.Configuration.GetConnectionString(ECommerceDbContext.ConnectionStringName);
 if (!string.IsNullOrEmpty(connectionString))
 {
     Console.WriteLine("[STARTUP] Configuring database connection...");
 
     builder.Services.AddDbContext<ECommerceDbContext>(options =>
-        options.UseSqlServer(connectionString));
+        options.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString)));
 
     builder.Services.AddScoped<UnitOfWork>();
     builder.Services.AddScoped<OrderWorkflowDatabaseService>();
@@ -67,9 +80,11 @@ else
 }
 
 // Configure Delivery API HttpClient with Polly Retry Policy
+var deliveryBaseUrl = builder.Configuration["DeliveryApi:BaseUrl"] ?? "http://localhost:5000";
+
 builder.Services.AddHttpClient<DeliveryApiClient>(client =>
 {
-    client.BaseAddress = new Uri("http://localhost:5000");
+    client.BaseAddress = new Uri(deliveryBaseUrl);
     client.Timeout = TimeSpan.FromSeconds(30);
     client.DefaultRequestHeaders.Add("Accept", "application/json");
     client.DefaultRequestHeaders.Add("User-Agent", "ECommerceCartAPI/1.0");
@@ -114,6 +129,22 @@ Console.WriteLine("[STARTUP] Cart API Service registered");
 
 var app = builder.Build();
 
+// Initialize & seed database (safe; seeding skips if data exists)
+if (!string.IsNullOrEmpty(connectionString))
+{
+    try
+    {
+        Console.WriteLine("[STARTUP] Initializing database...");
+        await DatabaseConfiguration.InitializeDatabaseAsync(app.Services);
+        await DatabaseConfiguration.SeedDatabaseAsync(app.Services);
+        Console.WriteLine("[STARTUP] Database initialization complete");
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"[STARTUP][DB ERROR] Database init failed: {ex.Message}");
+    }
+}
+
 // Demonstrate message queue patterns
 Console.WriteLine("\n????????????????????????????????????????????????????????????????????????");
 Console.WriteLine("  DEMONSTRATING MESSAGE QUEUE PATTERNS");
@@ -125,22 +156,16 @@ await TopicExample.DemonstrateTopic();
 Console.WriteLine("????????????????????????????????????????????????????????????????????????\n");
 
 // Configure the HTTP request pipeline
-if (app.Environment.IsDevelopment())
+var enableSwagger = builder.Configuration.GetValue<bool>("EnableSwagger");
+
+if (app.Environment.IsDevelopment() || enableSwagger)
 {
     app.UseSwagger();
     app.UseSwaggerUI(c =>
     {
         c.SwaggerEndpoint("/swagger/v1/swagger.json", "E-Commerce Cart API v1");
-        c.RoutePrefix = string.Empty;
+        c.RoutePrefix = string.Empty; // Swagger at /
         c.InjectStylesheet("/swagger-custom.css");
-        c.DisplayRequestDuration();
-        c.EnableDeepLinking();
-        c.EnableFilter();
-        c.ShowExtensions();
-        c.EnableValidator();
-        c.DefaultModelsExpandDepth(2);
-        c.DefaultModelExpandDepth(2);
-        c.DocumentTitle = "E-Commerce Cart API - Interactive Documentation";
         c.InjectJavascript("/swagger-custom.js");
     });
 }
@@ -148,6 +173,8 @@ if (app.Environment.IsDevelopment())
 app.UseStaticFiles();
 app.UseAuthorization();
 app.MapControllers();
+
+app.MapGet("/", () => Results.Ok("OK"));
 
 Console.WriteLine("[STARTUP] E-Commerce Cart API is starting...");
 Console.WriteLine("[STARTUP] Swagger UI available at: http://localhost:5000");
