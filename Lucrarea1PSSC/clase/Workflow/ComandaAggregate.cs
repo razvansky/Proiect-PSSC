@@ -110,6 +110,23 @@ namespace Lucrarea1PSSC.clase.Workflow
             }
         }
 
+        internal static Result<ComandaAggregate> CreateFromPaidCartWithId(Guid comandaId, Persoana persoana, CosDeCumparaturi cos)
+        {
+            var result = CreateFromPaidCart(persoana, cos);
+            return result switch
+            {
+                Result<ComandaAggregate>.Success s => new Result<ComandaAggregate>.Success(new ComandaAggregate(
+                    comandaId,
+                    s.Value.NumeClient,
+                    s.Value.AdresaLivrare,
+                    new List<ProdusCos>(s.Value.Produse),
+                    s.Value.Total,
+                    s.Value.DataPlasare)),
+                Result<ComandaAggregate>.Failure f => f,
+                _ => DomainError.Create("ORDER_CREATION_FAILED", "Eroare la crearea comenzii", "Unknown error")
+            };
+        }
+
         [Obsolete("Use CreateFromPaidCart returning Result<T> instead")]
         public static (bool Success, ComandaAggregate? Order, string? Error) CreateFromPaidCartLegacy(
             Persoana persoana,

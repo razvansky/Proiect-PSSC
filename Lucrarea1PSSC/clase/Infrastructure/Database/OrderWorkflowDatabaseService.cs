@@ -90,7 +90,7 @@ namespace Lucrarea1PSSC.clase.Infrastructure.Database
         /// <summary>
         /// Verify product exists in database
         /// </summary>
-        public async Task<(bool Exists, ProductDbModel Product)> VerifyProductExistsAsync(string productName)
+        public async Task<(bool Exists, ProductDbModel? Product)> VerifyProductExistsAsync(string productName)
         {
             try
             {
@@ -247,7 +247,7 @@ namespace Lucrarea1PSSC.clase.Infrastructure.Database
         /// <summary>
         /// Get order details from database
         /// </summary>
-        public async Task<OrderDbModel> GetOrderDetailsAsync(Guid orderNumber)
+        public async Task<OrderDbModel?> GetOrderDetailsAsync(Guid orderNumber)
         {
             try
             {

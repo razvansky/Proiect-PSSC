@@ -5,6 +5,8 @@ using Lucrarea1PSSC.clase.Infrastructure.Database;
 using Lucrarea1PSSC.clase.Workflow.Events;
 using Lucrarea1PSSC.clase.Workflow.Orchestration;
 using Lucrarea1PSSC.clase.Infrastructure.Messaging;
+using Lucrarea1PSSC.clase.Infrastructure;
+using Lucrarea1PSSC.clase.Workflow;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -52,15 +54,18 @@ public class PlasareComandaWorkflow
     private readonly OrderWorkflowDatabaseService? _dbService;
     private readonly OrderProcessingOrchestrator? _orchestrator;
     private readonly IMessageBus? _messageBus;
+    private readonly Lucrarea1PSSC.clase.Workflow.PreluareComandaWorkflow? _preluareWorkflow;
 
     public PlasareComandaWorkflow(
         OrderWorkflowDatabaseService? dbService = null,
         OrderProcessingOrchestrator? orchestrator = null,
-        IMessageBus? messageBus = null)
+        IMessageBus? messageBus = null,
+        Lucrarea1PSSC.clase.Workflow.PreluareComandaWorkflow? preluareWorkflow = null)
     {
         _dbService = dbService;
         _orchestrator = orchestrator;
         _messageBus = messageBus;
+        _preluareWorkflow = preluareWorkflow;
     }
 
     public async Task<ComandaEvent.IComandaEvent> PlaseazaComandaAsync(
@@ -98,6 +103,7 @@ public class PlasareComandaWorkflow
         {
             var totalComanda = cos.TotalCos();
             var numarProduse = cos.GetProduseCos().Count;
+
             var orderNumber = Guid.NewGuid();
 
             // Save to database if service is available
@@ -122,6 +128,16 @@ public class PlasareComandaWorkflow
                 orderNumber = order!.OrderNumber;
             }
 
+            // Register the order so PreluareComanda endpoints can find it
+            if (_preluareWorkflow != null)
+            {
+                var aggResult = ComandaAggregate.CreateFromPaidCartWithId(orderNumber, persoana, cos);
+                if (aggResult is Result<ComandaAggregate>.Success s)
+                {
+                    _preluareWorkflow.RegisterOrder(s.Value);
+                }
+            }
+
             // Publish on bus (used by Billing/Shipping contexts once added)
             if (_messageBus != null)
             {
@@ -134,7 +150,6 @@ public class PlasareComandaWorkflow
                     numarProduse));
             }
 
-            // 2) Keep existing orchestrator demo (topic-based)
             if (_orchestrator != null)
             {
                 Console.WriteLine("[WORKFLOW] Emitting OrderPlacedEvent...");
@@ -164,7 +179,7 @@ public class PlasareComandaWorkflow
                 totalComanda,
                 numarProduse,
                 orderNumber,
-                null // Tracking number would be set by event handlers
+                null
             );
         }
         catch (Exception ex)
