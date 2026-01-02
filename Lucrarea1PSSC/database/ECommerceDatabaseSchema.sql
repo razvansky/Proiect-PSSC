@@ -5,13 +5,13 @@ USE master;
 GO
 
 -- Create database if not exists
-IF NOT EXISTS (SELECT name FROM sys.databases WHERE name = 'ECommerceDB')
+IF NOT EXISTS (SELECT name FROM sys.databases WHERE name = 'free-sql-db-8880315')
 BEGIN
-    CREATE DATABASE ECommerceDB;
+    CREATE DATABASE [free-sql-db-8880315];
 END
 GO
 
-USE ECommerceDB;
+USE [free-sql-db-8880315];
 GO
 
 -- Drop tables if they exist (for clean setup)
@@ -300,7 +300,7 @@ BEGIN
     BEGIN CATCH
         ROLLBACK TRANSACTION;
         THROW;
-    END CATCH
+    END CATCH   
 END;
 GO
 

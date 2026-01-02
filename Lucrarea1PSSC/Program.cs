@@ -67,7 +67,7 @@ if (!string.IsNullOrEmpty(connectionString))
     Console.WriteLine("[STARTUP] Configuring database connection...");
 
     builder.Services.AddDbContext<ECommerceDbContext>(options =>
-        options.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString)));
+        options.UseSqlServer(connectionString));
 
     builder.Services.AddScoped<UnitOfWork>();
     builder.Services.AddScoped<OrderWorkflowDatabaseService>();

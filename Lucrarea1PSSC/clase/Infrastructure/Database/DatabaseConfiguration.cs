@@ -17,7 +17,7 @@ namespace Lucrarea1PSSC.clase.Infrastructure.Database
             string connectionString)
         {
             services.AddDbContext<ECommerceDbContext>(options =>
-                options.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString))
+                options.UseSqlServer(connectionString)
             );
 
             services.AddScoped<UnitOfWork>();
