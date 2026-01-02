@@ -109,7 +109,9 @@ namespace Lucrarea1PSSC.api.Services
                 if (string.IsNullOrWhiteSpace(customerName))
                     return (false, null, "Customer name is required");
 
-                var persoana = _persoane!.FirstOrDefault(p => p.Nume.Name == customerName);
+                var normalizedCustomerName = customerName.Trim();
+                var persoana = _persoane!.FirstOrDefault(p =>
+                    string.Equals(p.Nume.Name?.Trim(), normalizedCustomerName, StringComparison.OrdinalIgnoreCase));
                 if (persoana == null)
                     return (false, null, $"Customer '{customerName}' not found");
 
