@@ -308,7 +308,7 @@ namespace Lucrarea1PSSC.api.Controllers
                 ComandaId = order.ComandaId,
                 NumeClient = order.NumeClient,
                 Stare = order.Stare.ToString(),
-                Total = order.Total,
+                Total = order.Total.ToDouble(),
                 NumarProduse = order.Produse.Count,
                 DataPlasare = order.DataPlasare,
                 AdresaLivrare = order.AdresaLivrare.adress
@@ -352,7 +352,7 @@ namespace Lucrarea1PSSC.api.Controllers
                     ComandaId = order.ComandaId,
                     NumeClient = order.NumeClient,
                     Stare = order.Stare.ToString(),
-                    Total = order.Total,
+                    Total = order.Total.ToDouble(),
                     NumarProduse = order.Produse.Count,
                     DataPlasare = order.DataPlasare,
                     AdresaLivrare = order.AdresaLivrare.adress

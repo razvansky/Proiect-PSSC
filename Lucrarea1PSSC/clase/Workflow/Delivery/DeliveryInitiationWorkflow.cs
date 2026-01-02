@@ -4,6 +4,7 @@ using Lucrarea1PSSC.clase.Workflow.Events;
 using Lucrarea1PSSC.clase.Infrastructure.Messaging;
 using Lucrarea1PSSC.api.Services.Delivery;
 using Lucrarea1PSSC.api.DTOs.Delivery;
+using Lucrarea1PSSC.clase.Workflow.ValueObjects;
 
 namespace Lucrarea1PSSC.clase.Workflow.Delivery
 {
@@ -15,7 +16,7 @@ namespace Lucrarea1PSSC.clase.Workflow.Delivery
         public Guid MessageId { get; }
         public DateTime Timestamp { get; }
         public string MessageType => "DeliveryInitiated";
-        
+
         public Guid OrderNumber { get; set; }
         public string TrackingNumber { get; set; } = string.Empty;
         public string Carrier { get; set; } = string.Empty;
@@ -43,9 +44,7 @@ namespace Lucrarea1PSSC.clase.Workflow.Delivery
         private readonly DeliveryApiClient? _deliveryClient;
         private readonly IMessageTopic<DeliveryInitiatedEvent>? _deliveryInitiatedTopic;
 
-        public DeliveryInitiationWorkflow(
-            DeliveryApiClient? deliveryClient = null,
-            IMessageTopic<DeliveryInitiatedEvent>? deliveryInitiatedTopic = null)
+        public DeliveryInitiationWorkflow(DeliveryApiClient? deliveryClient = null, IMessageTopic<DeliveryInitiatedEvent>? deliveryInitiatedTopic = null)
         {
             _deliveryClient = deliveryClient;
             _deliveryInitiatedTopic = deliveryInitiatedTopic;
@@ -58,103 +57,89 @@ namespace Lucrarea1PSSC.clase.Workflow.Delivery
         {
             Console.WriteLine($"[DELIVERY WORKFLOW] Starting delivery initiation for order {orderEvent.OrderNumber}...");
 
-            try
+            await Task.Delay(300);
+
+            DeliveryResponse deliveryResponse;
+
+            if (_deliveryClient != null)
             {
-                // Simulate processing time
-                await Task.Delay(300);
+                Console.WriteLine($"[DELIVERY WORKFLOW] Calling external delivery API...");
 
-                DeliveryResponse deliveryResponse;
-
-                if (_deliveryClient != null)
+                var deliveryRequest = new DeliveryRequest
                 {
-                    // Use actual delivery API client
-                    Console.WriteLine($"[DELIVERY WORKFLOW] Calling external delivery API...");
-                    
-                    var deliveryRequest = new DeliveryRequest
-                    {
-                        OrderNumber = orderEvent.OrderNumber,
-                        CustomerName = orderEvent.CustomerName,
-                        DeliveryAddress = orderEvent.DeliveryAddress,
-                        City = ExtractCity(orderEvent.DeliveryAddress),
-                        PostalCode = "400000",
-                        Country = "Romania",
-                        Phone = "0721234567",
-                        TotalAmount = orderEvent.TotalAmount,
-                        TotalItems = orderEvent.TotalItems,
-                        OrderDate = orderEvent.OrderDate,
-                        Priority = orderEvent.TotalAmount > 1000 ? "Express" : "Standard",
-                        Notes = $"Order {orderEvent.OrderNumber}"
-                    };
+                    OrderNumber = orderEvent.OrderNumber,
+                    CustomerName = orderEvent.CustomerName,
+                    DeliveryAddress = orderEvent.DeliveryAddress,
+                    City = ExtractCity(orderEvent.DeliveryAddress),
+                    PostalCode = "400000",
+                    Country = "Romania",
+                    Phone = "0721234567",
+                    TotalAmount = orderEvent.TotalAmount,
+                    TotalItems = orderEvent.TotalItems,
+                    OrderDate = orderEvent.OrderDate,
+                    Priority = orderEvent.TotalAmount > 1000 ? "Express" : "Standard",
+                    Notes = $"Order {orderEvent.OrderNumber}"
+                };
 
-                    deliveryResponse = await _deliveryClient.ScheduleDeliveryAsync(deliveryRequest);
-                }
-                else
-                {
-                    // Fallback: simulate delivery scheduling
-                    Console.WriteLine($"[DELIVERY WORKFLOW] Using simulated delivery scheduling...");
-                    deliveryResponse = SimulateDeliveryScheduling(orderEvent);
-                }
-
-                if (deliveryResponse.Success)
-                {
-                    Console.WriteLine($"[DELIVERY WORKFLOW] ? Delivery scheduled successfully");
-                    Console.WriteLine($"[DELIVERY WORKFLOW] Tracking Number: {deliveryResponse.TrackingNumber}");
-                    Console.WriteLine($"[DELIVERY WORKFLOW] Carrier: {deliveryResponse.Carrier}");
-                    Console.WriteLine($"[DELIVERY WORKFLOW] Estimated Delivery: {deliveryResponse.EstimatedDeliveryDate:yyyy-MM-dd}");
-
-                    // Publish delivery initiated event
-                    if (_deliveryInitiatedTopic != null)
-                    {
-                        var deliveryInitiatedEvent = new DeliveryInitiatedEvent(
-                            orderEvent.OrderNumber,
-                            deliveryResponse.TrackingNumber,
-                            deliveryResponse.Carrier,
-                            deliveryResponse.EstimatedDeliveryDate,
-                            orderEvent.CustomerName
-                        );
-
-                        await _deliveryInitiatedTopic.PublishAsync(deliveryInitiatedEvent);
-                        Console.WriteLine($"[DELIVERY WORKFLOW] Published DeliveryInitiatedEvent to topic");
-                    }
-
-                    // Print delivery label
-                    PrintDeliveryLabel(orderEvent, deliveryResponse);
-                }
-                else
-                {
-                    Console.WriteLine($"[DELIVERY WORKFLOW] ? Delivery scheduling failed: {deliveryResponse.Message}");
-                }
-
-                return deliveryResponse;
+                deliveryResponse = await _deliveryClient.ScheduleDeliveryAsync(deliveryRequest);
             }
-            catch (Exception ex)
+            else
             {
-                Console.WriteLine($"[DELIVERY WORKFLOW] ? Error initiating delivery: {ex.Message}");
-                throw;
+                Console.WriteLine($"[DELIVERY WORKFLOW] Using simulated delivery scheduling...");
+                deliveryResponse = SimulateDeliveryScheduling(orderEvent);
             }
+
+            if (deliveryResponse.Success)
+            {
+                Console.WriteLine($"[DELIVERY WORKFLOW] Delivery scheduled successfully");
+                Console.WriteLine($"[DELIVERY WORKFLOW] Tracking Number: {deliveryResponse.TrackingNumber}");
+                Console.WriteLine($"[DELIVERY WORKFLOW] Carrier: {deliveryResponse.Carrier}");
+                Console.WriteLine($"[DELIVERY WORKFLOW] Estimated Delivery: {deliveryResponse.EstimatedDeliveryDate:yyyy-MM-dd}");
+
+                if (_deliveryInitiatedTopic != null)
+                {
+                    var deliveryInitiatedEvent = new DeliveryInitiatedEvent(
+                        orderEvent.OrderNumber,
+                        deliveryResponse.TrackingNumber,
+                        deliveryResponse.Carrier,
+                        deliveryResponse.EstimatedDeliveryDate,
+                        orderEvent.CustomerName);
+
+                    await _deliveryInitiatedTopic.PublishAsync(deliveryInitiatedEvent);
+                    Console.WriteLine($"[DELIVERY WORKFLOW] Published DeliveryInitiatedEvent to topic");
+                }
+
+                PrintDeliveryLabel(orderEvent, deliveryResponse);
+            }
+            else
+            {
+                Console.WriteLine($"[DELIVERY WORKFLOW] Delivery scheduling failed: {deliveryResponse.Message}");
+            }
+
+            return deliveryResponse;
         }
 
         private DeliveryResponse SimulateDeliveryScheduling(OrderPlacedEvent orderEvent)
         {
-            var trackingNumber = $"TRK-{DateTime.Now:yyyyMMdd}-{new Random().Next(100000, 999999)}";
+            var shipmentId = ShipmentId.Create();
+            var trackingNumber = $"TRK-{DateTime.Now:yyyyMMdd}-{shipmentId.Value.ToString("N")[..6].ToUpperInvariant()}";
             var carrier = orderEvent.TotalAmount > 1000 ? "FAN Courier Express" : "Romanian Post";
             var estimatedDays = orderEvent.TotalAmount > 1000 ? 1 : 3;
 
             return new DeliveryResponse
             {
                 Success = true,
-                DeliveryId = Guid.NewGuid().ToString(),
+                DeliveryId = shipmentId.Value.ToString(),
                 TrackingNumber = trackingNumber,
                 Carrier = carrier,
                 EstimatedDeliveryDate = DateTime.Now.AddDays(estimatedDays),
                 Status = "Pending",
                 Message = "Delivery scheduled successfully"
-            };
+            }; 
         }
 
         private string ExtractCity(string address)
         {
-            // Simple extraction - in production you'd parse the address properly
             if (address.Contains("Cluj")) return "Cluj-Napoca";
             if (address.Contains("Bucuresti") || address.Contains("Bucharest")) return "Bucuresti";
             if (address.Contains("Iasi")) return "Iasi";

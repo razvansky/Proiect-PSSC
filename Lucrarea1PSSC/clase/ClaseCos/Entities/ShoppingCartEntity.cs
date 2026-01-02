@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using Lucrarea1PSSC.clase.ClaseProduse;
 using Lucrarea1PSSC.clase.ClaseProduse.ValueObjects;
+using Lucrarea1PSSC.clase.Workflow.ValueObjects;
 
 namespace Lucrarea1PSSC.clase.ClaseCos.Entities
 {

@@ -3,6 +3,7 @@ using Lucrarea1PSSC.clase.Workflow.Orchestration;
 using Lucrarea1PSSC.clase.Workflow;
 using Lucrarea1PSSC.api.Services;
 using Lucrarea1PSSC.api.Services.Delivery;
+using Lucrarea1PSSC.clase.Infrastructure.Messaging;
 using Microsoft.EntityFrameworkCore;
 using Polly;
 using Polly.Extensions.Http;
@@ -51,13 +52,13 @@ var connectionString = builder.Configuration.GetConnectionString("ECommerceDB");
 if (!string.IsNullOrEmpty(connectionString))
 {
     Console.WriteLine("[STARTUP] Configuring database connection...");
-    
+
     builder.Services.AddDbContext<ECommerceDbContext>(options =>
         options.UseSqlServer(connectionString));
-    
+
     builder.Services.AddScoped<UnitOfWork>();
     builder.Services.AddScoped<OrderWorkflowDatabaseService>();
-    
+
     Console.WriteLine("[STARTUP] Database services configured");
 }
 else
@@ -77,6 +78,9 @@ builder.Services.AddHttpClient<DeliveryApiClient>(client =>
 .AddPolicyHandler(GetCircuitBreakerPolicy());
 
 Console.WriteLine("[STARTUP] Delivery API client configured with retry policy (3 retries, exponential backoff)");
+
+// IMessageBus for future inter-context communication (Billing/Shipping/Order)
+builder.Services.AddSingleton<IMessageBus, InMemoryMessageBus>();
 
 // Register Order Processing Orchestrator as Singleton (message bus should be singleton)
 builder.Services.AddSingleton<OrderProcessingOrchestrator>(serviceProvider =>
@@ -102,7 +106,8 @@ builder.Services.AddScoped<CartApiService>(serviceProvider =>
     var dbService = serviceProvider.GetService<OrderWorkflowDatabaseService>();
     var deliveryClient = serviceProvider.GetService<DeliveryApiClient>();
     var orchestrator = serviceProvider.GetService<OrderProcessingOrchestrator>();
-    return new CartApiService(dbService, deliveryClient, orchestrator);
+    var messageBus = serviceProvider.GetService<IMessageBus>();
+    return new CartApiService(dbService, deliveryClient, orchestrator, messageBus);
 });
 
 Console.WriteLine("[STARTUP] Cart API Service registered");

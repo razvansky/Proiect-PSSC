@@ -1,8 +1,9 @@
 using Lucrarea1PSSC.clase.ClaseCos;
 using Lucrarea1PSSC.clase.ClaseGestionarePersoane;
+using Lucrarea1PSSC.clase.Infrastructure;
+using Lucrarea1PSSC.clase.Workflow.ValueObjects;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 
 namespace Lucrarea1PSSC.clase.Workflow
 {
@@ -11,93 +12,86 @@ namespace Lucrarea1PSSC.clase.Workflow
     /// </summary>
     public enum StaraComanda
     {
-        Plasata,        // Order placed
-        InPregatire,    // Order being prepared
-        Expediata,      // Order shipped
-        Livrata,        // Order delivered
-        Anulata         // Order cancelled
+        Plasata,
+        InPregatire,
+        Expediata,
+        Livrata,
+        Anulata
     }
 
-    /// <summary>
-    /// Order Aggregate Root
-    /// Represents a placed order with delivery information
-    /// INVARIANTS:
-    /// - Order can only be created from paid carts
-    /// - Delivery address must be valid
-    /// - Order total is calculated at creation and immutable
-    /// - Products in order cannot be modified after placement
-    /// - Order state transitions follow business rules
-    /// </summary>
     public class ComandaAggregate
     {
         private readonly Guid _comandaId;
         private readonly string _numeClient;
         private readonly Adress _adresaLivrare;
         private readonly List<ProdusCos> _produse;
-        private readonly double _total;
+        private readonly Money _total;
         private readonly DateTime _dataPlasare;
         private StaraComanda _stare;
+
+        private readonly List<StateTransition> _stateHistory = new();
 
         private ComandaAggregate(
             Guid comandaId,
             string numeClient,
             Adress adresaLivrare,
             List<ProdusCos> produse,
-            double total,
+            Money total,
             DateTime dataPlasare)
         {
             _comandaId = comandaId;
             _numeClient = numeClient ?? throw new ArgumentNullException(nameof(numeClient));
             _adresaLivrare = adresaLivrare ?? throw new ArgumentNullException(nameof(adresaLivrare));
             _produse = new List<ProdusCos>(produse ?? throw new ArgumentNullException(nameof(produse)));
-            _total = total;
+            _total = total ?? throw new ArgumentNullException(nameof(total));
             _dataPlasare = dataPlasare;
             _stare = StaraComanda.Plasata;
 
-            // INVARIANT: Order must have at least one product
             if (_produse.Count == 0)
                 throw new InvalidOperationException("Comanda trebuie sa contina cel putin un produs");
 
-            // INVARIANT: Total must be positive
-            if (_total <= 0)
+            if (_total.Amount <= 0)
                 throw new InvalidOperationException("Totalul comenzii trebuie sa fie pozitiv");
+
+            RecordStateTransition(StaraComanda.Plasata, "Order created");
         }
 
-        /// <summary>
-        /// Factory method to create order from paid cart
-        /// Validates all business rules and invariants
-        /// </summary>
-        public static (bool Success, ComandaAggregate? Order, string? Error) CreateFromPaidCart(
-            Persoana persoana,
-            CosDeCumparaturi cos)
+        public static Result<ComandaAggregate> CreateFromPaidCart(Persoana persoana, CosDeCumparaturi cos)
         {
-            // Validate person
             if (persoana == null)
-                return (false, null, "Persoana nu poate fi null");
+                return DomainError.ValidationFailed("Persoana nu poate fi null");
 
-            // Validate cart
             if (cos == null)
-                return (false, null, "Cosul nu poate fi null");
+                return DomainError.ValidationFailed("Cosul nu poate fi null");
 
-            // INVARIANT: Order can only be created from paid cart
             if (cos.GetStareCos() is not PayedCos)
-                return (false, null, "Cosul trebuie sa fie platit pentru a plasa comanda");
+                return DomainError.InvalidState(
+                    cos.GetStareCos().GetType().Name,
+                    "create order - cart must be paid");
 
-            // Validate delivery address
             if (persoana.Adress == null || persoana.Adress.adress.Length < 5)
-                return (false, null, "Adresa de livrare este invalida (minim 5 caractere)");
+                return DomainError.ValidationFailed("Adresa de livrare este invalida (minim 5 caractere)");
 
-            // Get products from cart
             var produse = cos.GetProduseCos();
             if (produse == null || produse.Count == 0)
-                return (false, null, "Cosul este gol");
+                return DomainError.BusinessRuleViolation("Cosul este gol", "Order must contain at least one product");
 
-            // Calculate total
-            var total = cos.TotalCos();
-            if (total <= 0)
-                return (false, null, "Totalul comenzii trebuie sa fie pozitiv");
+            var totalDouble = cos.TotalCos();
+            if (totalDouble <= 0)
+                return DomainError.InvariantViolation(
+                    "Totalul comenzii trebuie sa fie pozitiv",
+                    $"Calculated total: {totalDouble}");
 
-            // Create order
+            Money total;
+            try
+            {
+                total = Money.FromDouble(totalDouble, "RON");
+            }
+            catch (Exception ex)
+            {
+                return DomainError.InvariantViolation("Total invalid", ex.Message);
+            }
+
             try
             {
                 var comanda = new ComandaAggregate(
@@ -106,81 +100,162 @@ namespace Lucrarea1PSSC.clase.Workflow
                     persoana.Adress,
                     produse,
                     total,
-                    DateTime.UtcNow
-                );
+                    DateTime.UtcNow);
 
-                return (true, comanda, null);
+                return comanda;
             }
             catch (Exception ex)
             {
-                return (false, null, $"Eroare la crearea comenzii: {ex.Message}");
+                return DomainError.Create("ORDER_CREATION_FAILED", "Eroare la crearea comenzii", ex.Message);
             }
         }
 
-        /// <summary>
-        /// Convert order to success event
-        /// </summary>
+        [Obsolete("Use CreateFromPaidCart returning Result<T> instead")]
+        public static (bool Success, ComandaAggregate? Order, string? Error) CreateFromPaidCartLegacy(
+            Persoana persoana,
+            CosDeCumparaturi cos)
+        {
+            var result = CreateFromPaidCart(persoana, cos);
+
+            return result switch
+            {
+                Result<ComandaAggregate>.Success success => (true, success.Value, null),
+                Result<ComandaAggregate>.Failure failure => (false, null, failure.Error.Message),
+                _ => (false, null, "Unknown error")
+            };
+        }
+
         public ComandaEvent.ComandaPlasataSuccessEvent ToSuccessEvent()
         {
             return new ComandaEvent.ComandaPlasataSuccessEvent(
                 _numeClient,
-                _total,
+                _total.ToDouble(),
                 _produse.Count,
                 _comandaId
             );
         }
 
-        /// <summary>
-        /// Transition order to InPregatire state
-        /// </summary>
-        public void StartPreparation()
+        public Result<Unit> StartPreparation(string operatorName)
         {
             if (_stare != StaraComanda.Plasata)
-                throw new InvalidOperationException($"Nu se poate incepe pregatirea din starea {_stare}");
+                return DomainError.InvalidState(_stare.ToString(), "start preparation - order must be in Plasata state");
+
+            if (string.IsNullOrWhiteSpace(operatorName))
+                return DomainError.ValidationFailed("Operator name is required");
 
             _stare = StaraComanda.InPregatire;
+            RecordStateTransition(StaraComanda.InPregatire, $"Preparation started by {operatorName}");
+
+            return Unit.Default;
         }
 
-        /// <summary>
-        /// Transition order to Expediata state
-        /// </summary>
-        public void Ship()
+        [Obsolete("Use StartPreparation(operatorName) returning Result<Unit>")]
+        public void StartPreparation()
+        {
+            var result = StartPreparation("unknown");
+            if (result.IsFailure)
+                throw new InvalidOperationException(result.GetErrorOrThrow().Message);
+        }
+
+        public Result<Unit> Ship(string trackingNumber, string carrierName)
         {
             if (_stare != StaraComanda.InPregatire)
-                throw new InvalidOperationException($"Nu se poate expedia comanda din starea {_stare}");
+                return DomainError.InvalidState(_stare.ToString(), "ship - order must be in InPregatire state");
+
+            if (string.IsNullOrWhiteSpace(trackingNumber))
+                return DomainError.ValidationFailed("Tracking number is required");
+
+            if (string.IsNullOrWhiteSpace(carrierName))
+                return DomainError.ValidationFailed("Carrier name is required");
 
             _stare = StaraComanda.Expediata;
+            RecordStateTransition(StaraComanda.Expediata, $"Shipped via {carrierName}, tracking: {trackingNumber}");
+
+            return Unit.Default;
         }
 
-        /// <summary>
-        /// Transition order to Livrata state
-        /// </summary>
-        public void Deliver()
+        [Obsolete("Use Ship(trackingNumber, carrierName) returning Result<Unit>")]
+        public void Ship()
+        {
+            var result = Ship("UNKNOWN", "UNKNOWN");
+            if (result.IsFailure)
+                throw new InvalidOperationException(result.GetErrorOrThrow().Message);
+        }
+
+        public Result<Unit> Deliver(string receivedBy)
         {
             if (_stare != StaraComanda.Expediata)
-                throw new InvalidOperationException($"Nu se poate livra comanda din starea {_stare}");
+                return DomainError.InvalidState(_stare.ToString(), "deliver - order must be in Expediata state");
+
+            if (string.IsNullOrWhiteSpace(receivedBy))
+                return DomainError.ValidationFailed("Receiver name is required");
 
             _stare = StaraComanda.Livrata;
+            RecordStateTransition(StaraComanda.Livrata, $"Delivered to {receivedBy}");
+
+            return Unit.Default;
         }
 
-        /// <summary>
-        /// Cancel order (only if not shipped or delivered)
-        /// </summary>
-        public void Cancel()
+        [Obsolete("Use Deliver(receivedBy) returning Result<Unit>")]
+        public void Deliver()
+        {
+            var result = Deliver("UNKNOWN");
+            if (result.IsFailure)
+                throw new InvalidOperationException(result.GetErrorOrThrow().Message);
+        }
+
+        public Result<Unit> Cancel(string reason, string? cancelledBy = null)
         {
             if (_stare == StaraComanda.Expediata || _stare == StaraComanda.Livrata)
-                throw new InvalidOperationException($"Nu se poate anula comanda din starea {_stare}");
+                return DomainError.BusinessRuleViolation(
+                    $"Nu se poate anula comanda din starea {_stare}",
+                    "Orders can only be cancelled before shipping");
+
+            if (string.IsNullOrWhiteSpace(reason))
+                return DomainError.ValidationFailed("Cancellation reason is required");
 
             _stare = StaraComanda.Anulata;
+            var details = cancelledBy != null ? $"Cancelled by {cancelledBy}: {reason}" : $"Cancelled: {reason}";
+            RecordStateTransition(StaraComanda.Anulata, details);
+
+            return Unit.Default;
         }
 
-        // Read-only properties
+        [Obsolete("Use Cancel(reason, cancelledBy) returning Result<Unit>")]
+        public void Cancel()
+        {
+            var result = Cancel("No reason provided");
+            if (result.IsFailure)
+                throw new InvalidOperationException(result.GetErrorOrThrow().Message);
+        }
+
+        private void RecordStateTransition(StaraComanda newState, string reason)
+        {
+            _stateHistory.Add(new StateTransition(DateTime.UtcNow, newState, reason));
+        }
+
         public Guid ComandaId => _comandaId;
         public string NumeClient => _numeClient;
         public Adress AdresaLivrare => _adresaLivrare;
         public IReadOnlyList<ProdusCos> Produse => _produse.AsReadOnly();
-        public double Total => _total;
+        public Money Total => _total;
         public DateTime DataPlasare => _dataPlasare;
         public StaraComanda Stare => _stare;
+        public IReadOnlyList<StateTransition> StateHistory => _stateHistory.AsReadOnly();
+
+        public TimeSpan EstimatedPreparationTime
+        {
+            get
+            {
+                var baseMinutes = 5;
+                var productMinutes = _produse.Count * 2;
+                var highValueMinutes = _total.Amount > 1000 ? 5 : 0;
+                var bulkMinutes = _produse.Count > 5 ? 10 : 0;
+
+                return TimeSpan.FromMinutes(baseMinutes + productMinutes + highValueMinutes + bulkMinutes);
+            }
+        }
     }
+
+    public sealed record StateTransition(DateTime Timestamp, StaraComanda NewState, string Reason);
 }

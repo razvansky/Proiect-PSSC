@@ -9,13 +9,16 @@ using Lucrarea1PSSC.clase.Infrastructure.Database;
 using Lucrarea1PSSC.clase.Workflow.Orchestration;
 using Lucrarea1PSSC.api.Services.Delivery;
 using Lucrarea1PSSC.api.DTOs;
+using Lucrarea1PSSC.clase.Infrastructure.Messaging;
 
 namespace Lucrarea1PSSC.api.Services
 {
     public class CartApiService
     {
         private readonly OrderWorkflowDatabaseService? _dbService;
+        private readonly DeliveryApiClient? _deliveryClient;
         private readonly OrderProcessingOrchestrator? _orchestrator;
+        private readonly IMessageBus? _messageBus;
         private static List<Produs>? _produse;
         private static List<Persoana>? _persoane;
         private static readonly Dictionary<string, CosDeCumparaturi> _activeCarts = new();
@@ -25,10 +28,13 @@ namespace Lucrarea1PSSC.api.Services
         public CartApiService(
             OrderWorkflowDatabaseService? dbService = null, 
             DeliveryApiClient? deliveryClient = null,
-            OrderProcessingOrchestrator? orchestrator = null)
+            OrderProcessingOrchestrator? orchestrator = null,
+            IMessageBus? messageBus = null)
         {
             _dbService = dbService;
+            _deliveryClient = deliveryClient;
             _orchestrator = orchestrator;
+            _messageBus = messageBus;
         }
 
         private async Task EnsureInitializedAsync()
@@ -279,7 +285,7 @@ namespace Lucrarea1PSSC.api.Services
                     {
                         Console.WriteLine("[CartApiService] Triggering order workflow with event orchestration...");
                         
-                        var workflow = new PlasareComandaWorkflow(_dbService, _orchestrator);
+                        var workflow = new PlasareComandaWorkflow(_dbService, _orchestrator, _messageBus);
                         var orderResult = await workflow.PlaseazaComandaAsync(persoana, cos, _produse!);
                         
                         if (orderResult is ComandaEvent.ComandaPlasataSuccessEvent successEvent)

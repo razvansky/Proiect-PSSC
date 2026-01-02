@@ -4,6 +4,7 @@ using Lucrarea1PSSC.clase.ClaseGestionarePersoane;
 using Lucrarea1PSSC.clase.Infrastructure.Database;
 using Lucrarea1PSSC.clase.Workflow.Events;
 using Lucrarea1PSSC.clase.Workflow.Orchestration;
+using Lucrarea1PSSC.clase.Infrastructure.Messaging;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -50,13 +51,16 @@ public class PlasareComandaWorkflow
 {
     private readonly OrderWorkflowDatabaseService? _dbService;
     private readonly OrderProcessingOrchestrator? _orchestrator;
+    private readonly IMessageBus? _messageBus;
 
     public PlasareComandaWorkflow(
         OrderWorkflowDatabaseService? dbService = null,
-        OrderProcessingOrchestrator? orchestrator = null)
+        OrderProcessingOrchestrator? orchestrator = null,
+        IMessageBus? messageBus = null)
     {
         _dbService = dbService;
         _orchestrator = orchestrator;
+        _messageBus = messageBus;
     }
 
     public async Task<ComandaEvent.IComandaEvent> PlaseazaComandaAsync(
@@ -118,11 +122,23 @@ public class PlasareComandaWorkflow
                 orderNumber = order!.OrderNumber;
             }
 
-            // EMIT ORDER PLACED EVENT - triggers invoice generation and delivery initiation
+            // Publish on bus (used by Billing/Shipping contexts once added)
+            if (_messageBus != null)
+            {
+                await _messageBus.PublishAsync(new OrderPlacedIntegrationMessage(
+                    orderNumber,
+                    persoana.Nume.Name,
+                    persoana.Email.email,
+                    persoana.Adress.adress,
+                    (decimal)totalComanda,
+                    numarProduse));
+            }
+
+            // 2) Keep existing orchestrator demo (topic-based)
             if (_orchestrator != null)
             {
                 Console.WriteLine("[WORKFLOW] Emitting OrderPlacedEvent...");
-                
+
                 var orderPlacedEvent = new OrderPlacedEvent(
                     orderNumber,
                     persoana.Nume.Name,
@@ -141,9 +157,6 @@ public class PlasareComandaWorkflow
                 );
 
                 await _orchestrator.ProcessOrderAsync(orderPlacedEvent);
-                
-                // Note: Tracking number would come from delivery workflow event
-                // For now, we return success without tracking
             }
 
             return new ComandaEvent.ComandaPlasataSuccessEvent(
@@ -204,5 +217,35 @@ public class PlasareComandaWorkflow
         {
             return new ComandaEvent.ComandaPlasataFailedEvent($"Eroare la procesarea comenzii: {ex.Message}");
         }
+    }
+}
+
+public sealed class OrderPlacedIntegrationMessage : Lucrarea1PSSC.clase.Infrastructure.Messaging.IMessage
+{
+    public Guid MessageId { get; } = Guid.NewGuid();
+    public DateTime Timestamp { get; } = DateTime.UtcNow;
+    public string MessageType => "OrderPlacedIntegration";
+
+    public Guid OrderNumber { get; }
+    public string CustomerName { get; }
+    public string CustomerEmail { get; }
+    public string DeliveryAddress { get; }
+    public decimal TotalAmount { get; }
+    public int TotalItems { get; }
+
+    public OrderPlacedIntegrationMessage(
+        Guid orderNumber,
+        string customerName,
+        string customerEmail,
+        string deliveryAddress,
+        decimal totalAmount,
+        int totalItems)
+    {
+        OrderNumber = orderNumber;
+        CustomerName = customerName;
+        CustomerEmail = customerEmail;
+        DeliveryAddress = deliveryAddress;
+        TotalAmount = totalAmount;
+        TotalItems = totalItems;
     }
 }
