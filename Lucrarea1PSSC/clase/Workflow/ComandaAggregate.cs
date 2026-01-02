@@ -272,6 +272,28 @@ namespace Lucrarea1PSSC.clase.Workflow
                 return TimeSpan.FromMinutes(baseMinutes + productMinutes + highValueMinutes + bulkMinutes);
             }
         }
+
+        internal static ComandaAggregate CreateFromDatabase(
+            Guid comandaId,
+            string numeClient,
+            string deliveryAddress,
+            List<ProdusCos> produse,
+            Money total,
+            DateTime dataPlasare,
+            StaraComanda stare)
+        {
+            var agg = new ComandaAggregate(
+                comandaId,
+                numeClient,
+                new Adress(deliveryAddress),
+                produse,
+                total,
+                dataPlasare);
+
+            // align state with DB status
+            agg._stare = stare;
+            return agg;
+        }
     }
 
     public sealed record StateTransition(DateTime Timestamp, StaraComanda NewState, string Reason);

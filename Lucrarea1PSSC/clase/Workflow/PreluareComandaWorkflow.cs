@@ -2,6 +2,9 @@ using Lucrarea1PSSC.clase.ClaseCos;
 using Lucrarea1PSSC.clase.Infrastructure;
 using Lucrarea1PSSC.clase.Infrastructure.Database;
 using Lucrarea1PSSC.clase.Workflow.Commands;
+using Lucrarea1PSSC.clase.Workflow.ValueObjects;
+using Lucrarea1PSSC.clase.ClaseGestionarePersoane;
+using Lucrarea1PSSC.clase.ClaseProduse;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -42,18 +45,46 @@ namespace Lucrarea1PSSC.clase.Workflow
 
             if (!_orderRepository.TryGetValue(comandaId, out var order))
             {
+                // Fallback: try DB
                 if (_dbService != null)
                 {
                     try
                     {
                         var dbOrder = await _dbService.GetOrderDetailsAsync(comandaId);
-                        if (dbOrder == null)
+                        if (dbOrder != null)
                         {
-                            Console.WriteLine($"[PRELUARE WORKFLOW] Order not found: {comandaId}");
-                            return new ComandaEvent.ComandaPreluataFailedEvent(
-                                comandaId,
-                                "Comanda nu a fost gasita in sistem",
-                                DateTime.UtcNow);
+                            var produse = new List<ProdusCos>();
+                            foreach (var item in dbOrder.OrderItems)
+                            {
+                                produse.Add(new ProdusCos(
+                                    new CodProdus(item.ProductCode),
+                                    item.ProductName,
+                                    new UnitQuantity((double)item.Quantity),
+                                    new KilogramQuantity(1.0),
+                                    new Price((double)item.UnitPrice)));
+                            }
+
+                            var mappedState = dbOrder.Status switch
+                            {
+                                "Placed" => StaraComanda.Plasata,
+                                "InPregatire" => StaraComanda.InPregatire,
+                                "Shipped" => StaraComanda.Expediata,
+                                "Delivered" => StaraComanda.Livrata,
+                                "Cancelled" => StaraComanda.Anulata,
+                                _ => StaraComanda.Plasata
+                            };
+
+                            order = ComandaAggregate.CreateFromDatabase(
+                                dbOrder.OrderNumber,
+                                dbOrder.Customer?.Name ?? "Unknown",
+                                dbOrder.DeliveryAddress ?? "Unknown",
+                                produse,
+                                Money.FromDouble((double)dbOrder.Total, "RON"),
+                                dbOrder.OrderDate,
+                                mappedState);
+
+                            RegisterOrder(order);
+                            Console.WriteLine($"[PRELUARE WORKFLOW] Loaded order {comandaId} from database and registered in repository");
                         }
                     }
                     catch (Exception ex)
@@ -62,10 +93,13 @@ namespace Lucrarea1PSSC.clase.Workflow
                     }
                 }
 
-                return new ComandaEvent.ComandaPreluataFailedEvent(
-                    comandaId,
-                    "Comanda nu a fost gasita in sistem",
-                    DateTime.UtcNow);
+                if (order == null)
+                {
+                    return new ComandaEvent.ComandaPreluataFailedEvent(
+                        comandaId,
+                        "Comanda nu a fost gasita in sistem",
+                        DateTime.UtcNow);
+                }
             }
 
             var validation = ValidateOrderForPickup(order);

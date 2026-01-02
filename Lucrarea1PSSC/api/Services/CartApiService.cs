@@ -10,6 +10,7 @@ using Lucrarea1PSSC.clase.Workflow.Orchestration;
 using Lucrarea1PSSC.api.Services.Delivery;
 using Lucrarea1PSSC.api.DTOs;
 using Lucrarea1PSSC.clase.Infrastructure.Messaging;
+using Lucrarea1PSSC.clase.Workflow;
 
 namespace Lucrarea1PSSC.api.Services
 {
@@ -19,6 +20,7 @@ namespace Lucrarea1PSSC.api.Services
         private readonly DeliveryApiClient? _deliveryClient;
         private readonly OrderProcessingOrchestrator? _orchestrator;
         private readonly IMessageBus? _messageBus;
+        private readonly PreluareComandaWorkflow? _preluareWorkflow;
         private static List<Produs>? _produse;
         private static List<Persoana>? _persoane;
         private static readonly Dictionary<string, CosDeCumparaturi> _activeCarts = new();
@@ -29,12 +31,14 @@ namespace Lucrarea1PSSC.api.Services
             OrderWorkflowDatabaseService? dbService = null, 
             DeliveryApiClient? deliveryClient = null,
             OrderProcessingOrchestrator? orchestrator = null,
-            IMessageBus? messageBus = null)
+            IMessageBus? messageBus = null,
+            PreluareComandaWorkflow? preluareWorkflow = null)
         {
             _dbService = dbService;
             _deliveryClient = deliveryClient;
             _orchestrator = orchestrator;
             _messageBus = messageBus;
+            _preluareWorkflow = preluareWorkflow;
         }
 
         private async Task EnsureInitializedAsync()
@@ -91,13 +95,16 @@ namespace Lucrarea1PSSC.api.Services
             };
         }
 
+        private static string NormalizeKey(string? name) => (name ?? string.Empty).Trim();
+
         private CosDeCumparaturi GetOrCreateCart(string customerName)
         {
-            if (!_activeCarts.ContainsKey(customerName))
+            var key = NormalizeKey(customerName);
+            if (!_activeCarts.ContainsKey(key))
             {
-                _activeCarts[customerName] = new CosDeCumparaturi();
+                _activeCarts[key] = new CosDeCumparaturi();
             }
-            return _activeCarts[customerName];
+            return _activeCarts[key];
         }
 
         public async Task<(bool Success, ViewCartResponse? Response, string? Error)> ViewCartAsync(string customerName)
@@ -157,7 +164,7 @@ namespace Lucrarea1PSSC.api.Services
         public async Task<(bool Success, AddProductToCartResponse? Response, string? Error)> AddProductToCartAsync(AddProductToCartRequest request)
         {
             await EnsureInitializedAsync();
-            
+
             try
             {
                 Console.WriteLine($"\n????????????????????????????????????????????");
@@ -178,7 +185,10 @@ namespace Lucrarea1PSSC.api.Services
                     Console.WriteLine($"  - '{p.Nume}' (Code: {p.CodProdus.Cod}, Stock: {p.Quantity.Cantitate})");
                 }
 
-                var persoana = _persoane!.FirstOrDefault(p => p.Nume.Name == request.CustomerName);
+                var normalizedCustomerName = NormalizeKey(request.CustomerName);
+                var persoana = _persoane!.FirstOrDefault(p =>
+                    string.Equals(p.Nume.Name?.Trim(), normalizedCustomerName, StringComparison.OrdinalIgnoreCase));
+
                 if (persoana == null)
                 {
                     Console.WriteLine($"[DEBUG] ? Customer not found!");
@@ -186,7 +196,7 @@ namespace Lucrarea1PSSC.api.Services
                 }
                 Console.WriteLine($"[DEBUG] ? Customer found: {persoana.Nume.Name}");
 
-                var cos = GetOrCreateCart(request.CustomerName);
+                var cos = GetOrCreateCart(normalizedCustomerName);
                 Console.WriteLine($"[DEBUG] Cart state before add: {cos.GetStareCos().GetType().Name}");
                 Console.WriteLine($"[DEBUG] Items in cart before: {cos.GetProduseCos().Count}");
                 
@@ -252,20 +262,23 @@ namespace Lucrarea1PSSC.api.Services
         public async Task<(bool Success, MarkCartAsPaidResponse? Response, string? Error)> MarkCartAsPaidAsync(MarkCartAsPaidRequest request)
         {
             await EnsureInitializedAsync();
-            
+
             try
             {
                 if (string.IsNullOrWhiteSpace(request.CustomerName))
                     return (false, null, "Customer name is required");
 
-                var persoana = _persoane!.FirstOrDefault(p => p.Nume.Name == request.CustomerName);
+                var normalizedCustomerName = NormalizeKey(request.CustomerName);
+                var persoana = _persoane!.FirstOrDefault(p =>
+                    string.Equals(p.Nume.Name?.Trim(), normalizedCustomerName, StringComparison.OrdinalIgnoreCase));
+
                 if (persoana == null)
                     return (false, null, $"Customer '{request.CustomerName}' not found");
 
-                if (!_activeCarts.ContainsKey(request.CustomerName))
+                if (!_activeCarts.ContainsKey(normalizedCustomerName))
                     return (false, null, "No active cart found");
 
-                var cos = _activeCarts[request.CustomerName];
+                var cos = _activeCarts[normalizedCustomerName];
                 var stareCos = cos.GetStareCos();
 
                 if (stareCos is PayedCos)
@@ -280,19 +293,24 @@ namespace Lucrarea1PSSC.api.Services
                 if (!paymentSuccess)
                     return (false, null, "Payment failed");
 
-                // TRIGGER ORDER WORKFLOW WITH ORCHESTRATOR
-                if (_orchestrator != null && _dbService != null)
+                Guid? createdOrderId = null;
+
+                // Always trigger workflow when orchestrator exists; DB persistence is optional
+                if (_orchestrator != null)
                 {
                     try
                     {
-                        Console.WriteLine("[CartApiService] Triggering order workflow with event orchestration...");
-                        
-                        var workflow = new PlasareComandaWorkflow(_dbService, _orchestrator, _messageBus);
+                        Console.WriteLine(_dbService != null
+                            ? "[CartApiService] Triggering order workflow with event orchestration..."
+                            : "[CartApiService] Triggering order workflow (no database)...");
+
+                        var workflow = new PlasareComandaWorkflow(_dbService, _orchestrator, _messageBus, _preluareWorkflow);
                         var orderResult = await workflow.PlaseazaComandaAsync(persoana, cos, _produse!);
-                        
+
                         if (orderResult is ComandaEvent.ComandaPlasataSuccessEvent successEvent)
                         {
-                            Console.WriteLine($"[CartApiService] ? Order processed successfully");
+                            createdOrderId = successEvent.ComandaId;
+                            Console.WriteLine($"[CartApiService] ? Order processed successfully (OrderId: {createdOrderId})");
                         }
                         else if (orderResult is ComandaEvent.ComandaPlasataFailedEvent failedEvent)
                         {
@@ -304,31 +322,13 @@ namespace Lucrarea1PSSC.api.Services
                         Console.WriteLine($"[CartApiService] ?? Order workflow error: {ex.Message}");
                     }
                 }
-                else if (_orchestrator != null)
-                {
-                    // Even without database, we can trigger the orchestrator
-                    try
-                    {
-                        Console.WriteLine("[CartApiService] Triggering order workflow (no database)...");
-                        
-                        var workflow = new PlasareComandaWorkflow(null, _orchestrator);
-                        var orderResult = await workflow.PlaseazaComandaAsync(persoana, cos, _produse!);
-                        
-                        if (orderResult is ComandaEvent.ComandaPlasataSuccessEvent successEvent)
-                        {
-                            Console.WriteLine($"[CartApiService] ? Order processed successfully");
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        Console.WriteLine($"[CartApiService] ?? Order workflow error: {ex.Message}");
-                    }
-                }
 
                 var response = new MarkCartAsPaidResponse
                 {
                     Success = true,
-                    Message = $"Cart paid successfully for {request.CustomerName}. Invoice and delivery initiated.",
+                    Message = createdOrderId.HasValue
+                        ? $"Cart paid successfully for {normalizedCustomerName}. OrderId={createdOrderId}. Invoice and delivery initiated."
+                        : $"Cart paid successfully for {normalizedCustomerName}. Invoice and delivery initiated.",
                     TotalPaid = Convert.ToDecimal(totalAmount),
                     ItemsPaid = itemCount,
                     PaymentDate = DateTime.UtcNow,

@@ -122,7 +122,8 @@ builder.Services.AddScoped<CartApiService>(serviceProvider =>
     var deliveryClient = serviceProvider.GetService<DeliveryApiClient>();
     var orchestrator = serviceProvider.GetService<OrderProcessingOrchestrator>();
     var messageBus = serviceProvider.GetService<IMessageBus>();
-    return new CartApiService(dbService, deliveryClient, orchestrator, messageBus);
+    var preluareWorkflow = serviceProvider.GetService<PreluareComandaWorkflow>();
+    return new CartApiService(dbService, deliveryClient, orchestrator, messageBus, preluareWorkflow);
 });
 
 Console.WriteLine("[STARTUP] Cart API Service registered");
