@@ -9,6 +9,33 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <None Remove="ACADEMIC_EXCELLENCE_ROADMAP.md" />
+    <None Remove="API_DOCUMENTATION.md" />
+    <None Remove="BEFORE_AFTER_COMPARISON.md" />
+    <None Remove="COMMAND_EVENT_MAPPING.md" />
+    <None Remove="COMPLETE_TRANSFORMATION_SUMMARY.md" />
+    <None Remove="DATABASE_INTEGRATION_REQUIREMENTS.md" />
+    <None Remove="DELIVERY_API_QUICK_START.md" />
+    <None Remove="DIAGNOSTIC_MODE.md" />
+    <None Remove="ENTITY_STATES_DOCUMENTATION.md" />
+    <None Remove="FINAL_IMPLEMENTATION_REPORT.md" />
+    <None Remove="IMPLEMENTATION_SUMMARY.md" />
+    <None Remove="IMPLEMENTATION_VERIFICATION.md" />
+    <None Remove="QUICK_FIX_GUIDE.md" />
+    <None Remove="QUICK_REFERENCE.md" />
+    <None Remove="QUICK_START_DB.md" />
+    <None Remove="SQL_SERVER_SETUP_GUIDE.md" />
+    <None Remove="SWAGGER_ENHANCEMENT_GUIDE.md" />
+    <None Remove="SWAGGER_VISUAL_PREVIEW.md" />
+    <None Remove="TASK3_MESSAGE_QUEUES_IMPLEMENTATION.md" />
+    <None Remove="TASK3_QUICK_START.md" />
+    <None Remove="TESTING_GUIDE_TASK3.md" />
+    <None Remove="VALUE_OBJECTS_SUMMARY.md" />
+    <None Remove="VALUE_OBJECTS_VERIFICATION.md" />
+    <None Remove="WEBSITE_QUALITY_IMPROVEMENTS.md" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="Microsoft.EntityFrameworkCore" Version="9.0.0" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="9.0.0" />
 
