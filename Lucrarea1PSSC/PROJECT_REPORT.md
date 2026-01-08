@@ -1,19 +1,19 @@
-# Lucrarea1PSSC - DDD Lab
+﻿# Proiect E-Commerce  - DDD Lab
 Echipa
-[Nume Student 1]
-[Nume Student 2]
-[Nume Student 3]
+Peia Razvan	
+Mak Mario
+Mladin Alexandru
 
 Domeniul Ales
 E-Commerce Order Management System
 
 Descriere
-Sistemul implementeaz? un flux complet de gestionare a comenzilor pentru un magazin online, incluz�nd func?ionalit??i pentru co?ul de cump?r?turi (ad?ugare produse, validare stoc, plat?) ?i procesarea comenzilor (preluare, preg?tire, livrare) folosind principii DDD ?i arhitectur? bazat? pe evenimente.
+Sistemul implementează un flux complet de gestionare a comenzilor pentru un magazin online, incluzând funcționalități pentru coșul de cumpărături (adăugare produse, validare stoc, plată) și procesarea comenzilor (preluare, pregătire, livrare) folosind principii DDD și arhitectură bazată pe evenimente.
 
 Bounded Contexts Identificate
-[Shopping Cart Context]: Gestionarea stadiilor co?ului de cump?r?turi (Empty -> Paid) ?i validarea con?inutului.
-[Order Fulfillment Context]: Gestionarea ciclului de via?? al comenzii (Plasat? -> Livrat?) ?i a fluxurilor de lucru pentru operatori.
-[Catalog Context]: Definirea produselor, pre?urilor ?i unit??ilor de m?sur?.
+[Shopping Cart Context]: Gestionarea stadiilor coșului de cumpărături (Empty -> Paid) și validarea conținutului.
+[Order Fulfillment Context]: Gestionarea ciclului de viață al comenzii (Plasată -> Livrată) și a fluxurilor de lucru pentru operatori.
+[Catalog Context]: Definirea produselor, prețurilor și unităților de măsură.
 
 Event Storming Results
 [Link la diagram sau imagine]
@@ -21,25 +21,25 @@ Event Storming Results
 Implementare
 Value Objects
 [CodProdus]: Identificator unic pentru produse, validat la creare.
-[Price]: �ncapsuleaz? valoarea numeric? a pre?ului.
-[Quantity (Unit/Kilogram)]: Gestioneaz? cantit??ile produselor �n func?ie de unitatea de m?sur? (buc??i sau greutate).
-[Adress]: Value object pentru detaliile de livrare, asigur�nd imuabilitatea.
-[Money]: Gestionarea sumelor monetare ?i a valutei.
+[Price]: Încapsulează valoarea numerică a prețului.
+[Quantity (Unit/Kilogram)]: Gestionează cantitățile produselor în funcție de unitatea de măsură (bucăți sau greutate).
+[Adress]: Value object pentru detaliile de livrare, asigurând imuabilitatea.
+[Money]: Gestionarea sumelor monetare și a valutei.
 
 Entity States
-Unvalidated[Cos]: Co?ul con?ine produse dar nu a fost verificat (stoc, pre?uri).
-Validated[Cos]: Co?ul este validat ?i preg?tit pentru plat?.
-Payed[Cos]: Plata a fost confirmat?, co?ul devine o comand? plasat?.
-StaraComanda[Plasata]: Comanda a fost ini?ializat? de client.
-StaraComanda[InPregatire]: Comanda a fost preluat? de un operator.
+Unvalidated[Cos]: Coșul conține produse dar nu a fost verificat (stoc, prețuri).
+Validated[Cos]: Coșul este validat și pregătit pentru plată.
+Payed[Cos]: Plata a fost confirmată, coșul devine o comandă plasată.
+StaraComanda[Plasata]: Comanda a fost inițializată de client.
+StaraComanda[InPregatire]: Comanda a fost preluată de un operator.
 
 Operations
-Validate[Order]Operation: Verific? regulile de business (vechime comand?, total pozitiv, adres? valid?) �nainte de preluare.
-StartPreparation[Order]: Tranzi?ioneaz? starea comenzii �n "InPregatire".
-CalculateEstimatedPreparationTime: Estimeaz? timpul necesar proces?rii comenzii.
+Validate[Order]Operation: Verifică regulile de business (vechime comandă, total pozitiv, adresă validă) înainte de preluare.
+StartPreparation[Order]: Tranziționează starea comenzii în "InPregatire".
+CalculateEstimatedPreparationTime: Estimează timpul necesar procesării comenzii.
 
 Workflow
-[Preluare][Comanda]Workflow: Fluxul de preluare a comenzii de c?tre operator: Validare -> Actualizare Stare -> Publicare Evenimente -> Generare Bon.
+[Preluare][Comanda]Workflow: Fluxul de preluare a comenzii de către operator: Validare -> Actualizare Stare -> Publicare Evenimente -> Generare Bon.
 
 Rulare
 # Compile
@@ -51,23 +51,23 @@ dotnet run --project Lucrarea1PSSC
 # Run tests
 dotnet test
 
-Lec?ii �nv??ate
-Ce a func?ionat bine cu AI
-Generarea rapid? a claselor boilerplate pentru Value Objects.
-Implementarea pattern-ului de st?ri pentru Co?ul de Cump?r?turi.
+Lecții Învățate
+Ce a funcționat bine cu AI
+Generarea rapidă a claselor boilerplate pentru Value Objects.
+Implementarea pattern-ului de stări pentru Coșul de Cumpărături.
 
-Limit?ri ale AI identificate
-Dificult??i ini?iale �n �n?elegerea contextului specific al "KilogramQuantity" vs "UnitQuantity" f?r? explica?ii detaliate.
-Necesitatea ajust?rii manuale a conexiunilor cu baza de date.
+Limitări ale AI identificate
+Dificultăți inițiale în înțelegerea contextului specific al "KilogramQuantity" vs "UnitQuantity" fără explicații detaliate.
+Necesitatea ajustării manuale a conexiunilor cu baza de date.
 
 Prompturi Utile
-"Genereaz? o clas? Workflow pentru preluarea comenzii care s? includ? valid?ri ?i evenimente."
-"Refactorizeaz? co?ul de cump?r?turi folosind State Pattern pentru a evita st?rile invalide."
+"Generează o clasă Workflow pentru preluarea comenzii care să includă validări și evenimente."
+"Refactorizează coșul de cumpărături folosind State Pattern pentru a evita stările invalide."
 
 Design Decisions
-*   **Utilizarea Value Objects**: Am decis s? folosim obiecte de tip valoare (`Money`, `Quantity`, `Adress`) pentru a preveni "Primitive Obsession" ?i a centraliza logica de validare, asigur�nd c? un obiect nu poate exista �ntr-o stare invalid?.
-*   **State Pattern pentru Co?ul de Cump?r?turi**: Tranzi?iile co?ului (`Empty` -> `Unvalidated` -> `Validated` -> `Payed`) sunt modelate prin clase distincte care implementeaz? `IStareCos`. Aceasta garanteaz? c? opera?iunile specifice (ex. Plat?) pot fi apelate doar c�nd co?ul este �n starea corect?.
-*   **Result Pattern (Railway Oriented Programming)**: Gestionarea erorilor se face prin tipul `Result<T>` �n loc de excep?ii pentru logica de business previzibil?. Acest lucru permite un flux de execu?ie liniar ?i explicit.
-*   **Workflow Pattern**: Procesele complexe de business (ex. preluarea comenzii, plasarea comenzii) sunt izolate �n clase de tip Workflow. Acestea orchestreaz? interac?iunea dintre agregate, repository-uri ?i event bus, p?str�nd agregatele concentrate pe invarian?i.
-*   **Event-Driven Communication**: Decuplarea componentelor se realizeaz? prin publicarea de evenimente de domeniu (ex. `ComandaPreluataSuccessEvent`). Acest lucru permite altor p?r?i ale sistemului (ex. facturare, notific?ri) s? reac?ioneze f?r? a fi cuplate direct de logica de preluare.
-*   **Repository Pattern (In-Memory cu Fallback DB)**: Pentru simplitate �n dezvoltare dar robuste?e �n produc?ie, folosim un dic?ionar in-memory ca cache rapid, cu fallback c?tre baza de date SQL pentru persisten??.
+*   **Utilizarea Value Objects**: Am decis să folosim obiecte de tip valoare (`Money`, `Quantity`, `Adress`) pentru a preveni "Primitive Obsession" și a centraliza logica de validare, asigurând că un obiect nu poate exista într-o stare invalidă.
+*   **State Pattern pentru Coșul de Cumpărături**: Tranzițiile coșului (`Empty` -> `Unvalidated` -> `Validated` -> `Payed`) sunt modelate prin clase distincte care implementează `IStareCos`. Aceasta garantează că operațiunile specifice (ex. Plată) pot fi apelate doar când coșul este în starea corectă.
+*   **Result Pattern (Railway Oriented Programming)**: Gestionarea erorilor se face prin tipul `Result<T>` în loc de excepții pentru logica de business previzibilă. Acest lucru permite un flux de execuție liniar și explicit.
+*   **Workflow Pattern**: Procesele complexe de business (ex. preluarea comenzii, plasarea comenzii) sunt izolate în clase de tip Workflow. Acestea orchestrează interacțiunea dintre agregate, repository-uri și event bus, păstrând agregatele concentrate pe invarianți.
+*   **Event-Driven Communication**: Decuplarea componentelor se realizează prin publicarea de evenimente de domeniu (ex. `ComandaPreluataSuccessEvent`). Acest lucru permite altor părți ale sistemului (ex. facturare, notificări) să reacționeze fără a fi cuplate direct de logica de preluare.
+*   **Repository Pattern (In-Memory cu Fallback DB)**: Pentru simplitate în dezvoltare dar robustețe în producție, folosim un dicționar in-memory ca cache rapid, cu fallback către baza de date SQL pentru persistență.
