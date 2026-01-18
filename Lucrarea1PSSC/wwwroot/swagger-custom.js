@@ -13,6 +13,7 @@
             transformAllText();
             improveTextReadability();
             addWelcomeBanner();
+            addTryMeQuickActions();
             addQuickStartGuide();
             enhanceEndpointDescriptions();
             addStatusIndicators();
@@ -435,6 +436,274 @@
             infoContainer.insertBefore(banner, infoContainer.firstChild);
         }
     }
+
+    function addTryMeQuickActions() {
+        const infoContainer = document.querySelector('.information-container');
+        if (infoContainer && !document.querySelector('.try-me-quick-actions')) {
+            const tryMeSection = document.createElement('div');
+            tryMeSection.className = 'try-me-quick-actions';
+            tryMeSection.innerHTML = `
+                <div style="background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%); 
+                            padding: 2rem; 
+                            border-radius: 12px; 
+                            margin-bottom: 2rem;
+                            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+                            position: relative;
+                            overflow: hidden;">
+                    <div style="position: absolute; 
+                               top: -50px; 
+                               right: -50px; 
+                               width: 200px; 
+                               height: 200px; 
+                               background: rgba(255,255,255,0.1); 
+                               border-radius: 50%;
+                               filter: blur(40px);"></div>
+                    <div style="position: relative; z-index: 1;">
+                        <div style="text-align: center; margin-bottom: 2rem;">
+                            <div style="display: inline-block; 
+                                       background: rgba(255,255,255,0.2); 
+                                       padding: 0.75rem 1.5rem; 
+                                       border-radius: 50px;
+                                       margin-bottom: 1rem;
+                                       backdrop-filter: blur(10px);">
+                                <span style="font-size: 2.5rem;">⚡</span>
+                            </div>
+                            <h2 style="margin: 0 0 0.5rem 0; 
+                                      color: white; 
+                                      font-size: 2rem; 
+                                      font-weight: 900;
+                                      text-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                                Try Me - Quick Actions
+                            </h2>
+                            <p style="margin: 0; 
+                                     color: rgba(255,255,255,0.95); 
+                                     font-size: 1.125rem;
+                                     font-weight: 500;">
+                                Test the API instantly with one-click actions
+                            </p>
+                        </div>
+                        
+                        <div style="display: grid; 
+                                   grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); 
+                                   gap: 1rem;
+                                   margin-bottom: 1.5rem;">
+                            <button onclick="tryMeAction('viewCart')" 
+                                    class="try-me-btn"
+                                    style="background: rgba(255,255,255,0.95); 
+                                          color: #4f46e5; 
+                                          border: none; 
+                                          padding: 1.25rem; 
+                                          border-radius: 10px; 
+                                          font-weight: 700; 
+                                          font-size: 1rem;
+                                          cursor: pointer;
+                                          transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+                                          box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+                                          display: flex;
+                                          flex-direction: column;
+                                          align-items: center;
+                                          gap: 0.5rem;
+                                          text-align: center;">
+                                <span style="font-size: 2rem;">🛒</span>
+                                <span>View Cart</span>
+                                <span style="font-size: 0.75rem; 
+                                            font-weight: 500; 
+                                            opacity: 0.7;">
+                                    GET Ion Popescu's Cart
+                                </span>
+                            </button>
+                            
+                            <button onclick="tryMeAction('addProduct')" 
+                                    class="try-me-btn"
+                                    style="background: rgba(255,255,255,0.95); 
+                                          color: #059669; 
+                                          border: none; 
+                                          padding: 1.25rem; 
+                                          border-radius: 10px; 
+                                          font-weight: 700; 
+                                          font-size: 1rem;
+                                          cursor: pointer;
+                                          transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+                                          box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+                                          display: flex;
+                                          flex-direction: column;
+                                          align-items: center;
+                                          gap: 0.5rem;
+                                          text-align: center;">
+                                <span style="font-size: 2rem;">➕</span>
+                                <span>Add Product</span>
+                                <span style="font-size: 0.75rem; 
+                                            font-weight: 500; 
+                                            opacity: 0.7;">
+                                    Add Laptop to Cart
+                                </span>
+                            </button>
+                            
+                            <button onclick="tryMeAction('checkHealth')" 
+                                    class="try-me-btn"
+                                    style="background: rgba(255,255,255,0.95); 
+                                          color: #dc2626; 
+                                          border: none; 
+                                          padding: 1.25rem; 
+                                          border-radius: 10px; 
+                                          font-weight: 700; 
+                                          font-size: 1rem;
+                                          cursor: pointer;
+                                          transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+                                          box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+                                          display: flex;
+                                          flex-direction: column;
+                                          align-items: center;
+                                          gap: 0.5rem;
+                                          text-align: center;">
+                                <span style="font-size: 2rem;">💚</span>
+                                <span>Health Check</span>
+                                <span style="font-size: 0.75rem; 
+                                            font-weight: 500; 
+                                            opacity: 0.7;">
+                                    Test API Status
+                                </span>
+                            </button>
+                            
+                            <button onclick="tryMeAction('viewActiveCarts')" 
+                                    class="try-me-btn"
+                                    style="background: rgba(255,255,255,0.95); 
+                                          color: #f59e0b; 
+                                          border: none; 
+                                          padding: 1.25rem; 
+                                          border-radius: 10px; 
+                                          font-weight: 700; 
+                                          font-size: 1rem;
+                                          cursor: pointer;
+                                          transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+                                          box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+                                          display: flex;
+                                          flex-direction: column;
+                                          align-items: center;
+                                          gap: 0.5rem;
+                                          text-align: center;">
+                                <span style="font-size: 2rem;">📊</span>
+                                <span>Active Carts</span>
+                                <span style="font-size: 0.75rem; 
+                                            font-weight: 500; 
+                                            opacity: 0.7;">
+                                    View All Cart Status
+                                </span>
+                            </button>
+                        </div>
+                        
+                        <div id="try-me-result" style="display: none; 
+                                                      background: rgba(255,255,255,0.95); 
+                                                      border-radius: 10px; 
+                                                      padding: 1.5rem;
+                                                      margin-top: 1rem;
+                                                      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                                <h4 style="margin: 0; color: #0f172a; font-size: 1.125rem; font-weight: 700;">
+                                    📋 Response
+                                </h4>
+                                <button onclick="document.getElementById('try-me-result').style.display='none'" 
+                                        style="background: none; 
+                                              border: none; 
+                                              color: #64748b; 
+                                              cursor: pointer; 
+                                              font-size: 1.5rem;
+                                              padding: 0;
+                                              width: 32px;
+                                              height: 32px;
+                                              display: flex;
+                                              align-items: center;
+                                              justify-content: center;
+                                              border-radius: 6px;
+                                              transition: all 0.2s;">
+                                    ✕
+                                </button>
+                            </div>
+                            <pre id="try-me-response" style="background: #1e293b; 
+                                                            color: #e2e8f0; 
+                                                            padding: 1rem; 
+                                                            border-radius: 8px; 
+                                                            overflow-x: auto;
+                                                            margin: 0;
+                                                            font-size: 0.875rem;
+                                                            line-height: 1.6;"></pre>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            // Insert after welcome banner
+            const welcomeBanner = document.querySelector('.welcome-banner');
+            if (welcomeBanner && welcomeBanner.nextSibling) {
+                infoContainer.insertBefore(tryMeSection, welcomeBanner.nextSibling);
+            } else {
+                infoContainer.insertBefore(tryMeSection, infoContainer.firstChild);
+            }
+            
+            // Add CSS for hover effects
+            const style = document.createElement('style');
+            style.textContent = `
+                .try-me-btn:hover {
+                    transform: translateY(-4px) scale(1.02);
+                    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+                }
+                .try-me-btn:active {
+                    transform: translateY(-2px) scale(0.98);
+                }
+            `;
+            document.head.appendChild(style);
+        }
+    }
+
+    // Try Me action handler
+    window.tryMeAction = async function(action) {
+        const resultDiv = document.getElementById('try-me-result');
+        const responseDiv = document.getElementById('try-me-response');
+        
+        resultDiv.style.display = 'block';
+        responseDiv.textContent = '⏳ Loading...';
+        
+        try {
+            let response;
+            const baseUrl = window.location.origin;
+            
+            switch(action) {
+                case 'viewCart':
+                    response = await fetch(`${baseUrl}/api/cart/view/Ion Popescu`);
+                    break;
+                case 'addProduct':
+                    response = await fetch(`${baseUrl}/api/cart/add-product`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            customerName: "Ion Popescu",
+                            productName: "Laptop Dell XPS 15",
+                            quantity: 1
+                        })
+                    });
+                    break;
+                case 'checkHealth':
+                    response = await fetch(`${baseUrl}/api/cart/health`);
+                    break;
+                case 'viewActiveCarts':
+                    response = await fetch(`${baseUrl}/api/cart/active-carts`);
+                    break;
+            }
+            
+            const data = await response.json();
+            responseDiv.textContent = JSON.stringify(data, null, 2);
+            
+            // Add success/error styling
+            if (response.ok) {
+                responseDiv.style.borderLeft = '4px solid #22c55e';
+            } else {
+                responseDiv.style.borderLeft = '4px solid #ef4444';
+            }
+        } catch (error) {
+            responseDiv.textContent = `❌ Error: ${error.message}`;
+            responseDiv.style.borderLeft = '4px solid #ef4444';
+        }
+    };
 
     function addQuickStartGuide() {
         const infoContainer = document.querySelector('.information-container');
