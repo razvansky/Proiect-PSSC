@@ -817,11 +817,43 @@
                 border-bottom: 1px solid rgba(0, 0, 0, 0.1);
                 box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
                 z-index: 9999;
+                transition: opacity 0.3s ease;
             `;
             
-            fetch('/api/cart/health')
-                .then(response => response.json())
-                .then(data => {
+            // Initial loading state
+            status.innerHTML = `
+                <span style="width: 10px; 
+                             height: 10px; 
+                             background: #6b7280; 
+                             border-radius: 50%;
+                             display: inline-block;
+                             animation: spin 1s linear infinite;"></span>
+                <span style="color: #000000; 
+                             font-size: 0.9375rem; 
+                             font-weight: 700;
+                             letter-spacing: 0.025em;">
+                    Checking API Status...
+                </span>
+            `;
+            
+            // Add spinner animation
+            const spinStyle = document.createElement('style');
+            spinStyle.textContent = `
+                @keyframes spin {
+                    0% { transform: rotate(0deg); }
+                    100% { transform: rotate(360deg); }
+                }
+            `;
+            document.head.appendChild(spinStyle);
+            
+            document.body.appendChild(status);
+            
+            // Add minimum delay to show loading animation
+            const minDelay = new Promise(resolve => setTimeout(resolve, 1500));
+            const healthCheck = fetch('/api/cart/health').then(response => response.json());
+            
+            Promise.all([minDelay, healthCheck])
+                .then(([_, data]) => {
                     status.innerHTML = `
                         <span style="width: 10px; 
                                      height: 10px; 
@@ -848,21 +880,21 @@
                     document.head.appendChild(style);
                 })
                 .catch(() => {
-                    status.innerHTML = `
-                        <span style="width: 10px; 
-                                     height: 10px; 
-                                     background: #ef4444; 
-                                     border-radius: 50%;
-                                     display: inline-block;"></span>
-                        <span style="color: #000000; 
-                                     font-size: 0.9375rem; 
-                                     font-weight: 700;">
-                            API Service Offline
-                        </span>
-                    `;
+                    setTimeout(() => {
+                        status.innerHTML = `
+                            <span style="width: 10px; 
+                                         height: 10px; 
+                                         background: #ef4444; 
+                                         border-radius: 50%;
+                                         display: inline-block;"></span>
+                            <span style="color: #000000; 
+                                         font-size: 0.9375rem; 
+                                         font-weight: 700;">
+                                API Service Offline
+                            </span>
+                        `;
+                    }, 1500);
                 });
-            
-            document.body.appendChild(status);
         }
     }
 
