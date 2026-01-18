@@ -1,0 +1,65 @@
+﻿[
+  {
+    "CodProdus": 1,
+    "Nume": "Dero",
+    "Cantitate": 7,
+    "CantitateKilogram": 20,
+    "Pret": 15.5
+  },
+  {
+    "CodProdus": 2,
+    "Nume": "Sapun",
+    "Cantitate": 8,
+    "CantitateKilogram": 5,
+    "Pret": 7.2
+  },
+  {
+    "CodProdus": 3,
+    "Nume": "Apa",
+    "Cantitate": 45,
+    "CantitateKilogram": 2,
+    "Pret": 1
+  },
+  {
+    "CodProdus": 4,
+    "Nume": "Mop",
+    "Cantitate": 1,
+    "CantitateKilogram": 10.5,
+    "Pret": 25
+  },
+  {
+    "CodProdus": 5,
+    "Nume": "Gresie",
+    "Cantitate": 28,
+    "CantitateKilogram": 3.2,
+    "Pret": 12
+  },
+  {
+    "CodProdus": 6,
+    "Nume": "Faianta",
+    "Cantitate": 38,
+    "CantitateKilogram": 4.7,
+    "Pret": 1
+  },
+  {
+    "CodProdus": 7,
+    "Nume": "Laveta",
+    "Cantitate": 23,
+    "CantitateKilogram": 8.1,
+    "Pret": 5
+  },
+  {
+    "CodProdus": 8,
+    "Nume": "Detergent",
+    "Cantitate": 10,
+    "CantitateKilogram": 6,
+    "Pret": 10
+  },
+  {
+    "CodProdus": 9,
+    "Nume": "Burete",
+    "Cantitate": 16,
+    "CantitateKilogram": 7.2,
+    "Pret": 3.5
+  }
+]
