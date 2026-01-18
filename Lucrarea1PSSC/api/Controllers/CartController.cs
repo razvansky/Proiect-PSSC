@@ -33,17 +33,46 @@ namespace Lucrarea1PSSC.api.Controllers
         ///
         ///     GET /api/cart/view/Ion Popescu
         ///
-        /// This endpoint returns the complete shopping cart including:
-        /// - Cart status (Empty, Validated, Paid)
-        /// - List of all items with quantities and prices
-        /// - Total amount and item count
-        /// 
-        /// **Available Test Customers:**
-        /// - Ion Popescu
-        /// - Maria Ionescu
-        /// - Andrei Stanciu
-        /// - Elena Radu
-        /// - Mihai Popa
+        /// Sample response (200 OK):
+        ///
+        ///     {
+        ///       "customerName": "Ion Popescu",
+        ///       "cartStatus": "Validated",
+        ///       "items": [
+        ///         {
+        ///           "productCode": 101,
+        ///           "productName": "Laptop Dell XPS 15",
+        ///           "quantity": 2,
+        ///           "unitPrice": 5499.99,
+        ///           "lineTotal": 10999.98,
+        ///           "quantityType": "Unit",
+        ///           "kilogramQuantity": 0
+        ///         },
+        ///         {
+        ///           "productCode": 102,
+        ///           "productName": "Mouse Logitech MX Master",
+        ///           "quantity": 1,
+        ///           "unitPrice": 349.99,
+        ///           "lineTotal": 349.99,
+        ///           "quantityType": "Unit",
+        ///           "kilogramQuantity": 0
+        ///         }
+        ///       ],
+        ///       "totalAmount": 11349.97,
+        ///       "totalItems": 3,
+        ///       "lastModified": "2024-01-15T14:30:00Z"
+        ///     }
+        ///
+        /// Sample error response (404 Not Found):
+        ///
+        ///     {
+        ///       "error": "Customer 'Unknown User' not found...",
+        ///       "details": null,
+        ///       "timestamp": "2024-01-15T14:30:00Z"
+        ///     }
+        ///
+        /// **Test Customers:**
+        /// - Ion Popescu, Maria Ionescu, Andrei Stanciu, Elena Radu, Mihai Popa
         /// </remarks>
         /// <response code="200">Returns the shopping cart</response>
         /// <response code="400">If the customer name is invalid</response>
@@ -92,19 +121,37 @@ namespace Lucrarea1PSSC.api.Controllers
         ///        "quantity": 1
         ///     }
         ///
-        /// This endpoint will:
-        /// - Validate customer exists
-        /// - Check product availability and stock
-        /// - Add product to cart if stock is available
-        /// - Update cart total
-        /// - Publish domain event
-        /// 
+        /// Sample response (200 OK):
+        ///
+        ///     {
+        ///       "success": true,
+        ///       "message": "Product added to cart successfully",
+        ///       "addedItem": {
+        ///         "productCode": 101,
+        ///         "productName": "Laptop Dell XPS 15",
+        ///         "quantity": 1,
+        ///         "unitPrice": 5499.99,
+        ///         "lineTotal": 5499.99,
+        ///         "quantityType": "Unit",
+        ///         "kilogramQuantity": 0
+        ///       },
+        ///       "newCartTotal": 5499.99,
+        ///       "totalItems": 1
+        ///     }
+        ///
+        /// Sample error response (400 Bad Request - Insufficient Stock):
+        ///
+        ///     {
+        ///       "error": "Insufficient stock. Available: 5 units",
+        ///       "details": null,
+        ///       "timestamp": "2024-01-15T14:30:00Z"
+        ///     }
+        ///
         /// **Available Products:**
         /// - Laptop Dell XPS 15 (5499.99 RON, Stock: 10)
         /// - Mouse Logitech MX Master (349.99 RON, Stock: 50)
         /// - Keyboard Mechanical RGB (599.99 RON, Stock: 30)
         /// - Monitor LG 27" 4K (1899.99 RON, Stock: 15)
-        /// - And 6 more products...
         /// </remarks>
         /// <response code="200">Product added successfully</response>
         /// <response code="400">If the request is invalid or stock is insufficient</response>
@@ -174,13 +221,26 @@ namespace Lucrarea1PSSC.api.Controllers
         ///        "transactionId": "TXN-123456789"
         ///     }
         ///
-        /// This endpoint will:
-        /// - Validate cart state (must be Validated, not Empty or already Paid)
-        /// - Process payment
-        /// - Mark cart as paid
-        /// - Publish payment event
-        /// - Return transaction confirmation
-        /// 
+        /// Sample response (200 OK):
+        ///
+        ///     {
+        ///       "success": true,
+        ///       "message": "Payment processed successfully",
+        ///       "totalPaid": 5849.98,
+        ///       "itemsPaid": 2,
+        ///       "paymentDate": "2024-01-15T14:30:00Z",
+        ///       "transactionId": "TXN-123456789",
+        ///       "trackingNumber": "TRACK-2024011501"
+        ///     }
+        ///
+        /// Sample error response (400 Bad Request - Invalid Cart State):
+        ///
+        ///     {
+        ///       "error": "Cart is already paid. Cannot process payment twice.",
+        ///       "details": "Try viewing the cart or contact support if this is an error.",
+        ///       "timestamp": "2024-01-15T14:30:00Z"
+        ///     }
+        ///
         /// **Payment Methods:**
         /// - Card (Credit/Debit)
         /// - Cash
@@ -248,8 +308,16 @@ namespace Lucrarea1PSSC.api.Controllers
         ///
         ///     GET /api/cart/active-carts
         ///
-        /// Returns a dictionary with customer names as keys and cart statuses as values.
-        /// 
+        /// Sample response (200 OK):
+        ///
+        ///     {
+        ///       "Ion Popescu": "Validated",
+        ///       "Maria Ionescu": "Paid",
+        ///       "Andrei Stanciu": "Empty",
+        ///       "Elena Radu": "Validated",
+        ///       "Mihai Popa": "Paid"
+        ///     }
+        ///
         /// **Cart Statuses:**
         /// - Empty: No items in cart
         /// - Validated: Has items, ready for checkout
@@ -277,12 +345,19 @@ namespace Lucrarea1PSSC.api.Controllers
         /// </summary>
         /// <returns>API health status</returns>
         /// <remarks>
-        /// Simple health check to verify API is running.
-        /// 
-        /// Returns:
-        /// - Status: "Healthy"
-        /// - Service name
-        /// - Current timestamp
+        /// Sample request:
+        ///
+        ///     GET /api/cart/health
+        ///
+        /// Sample response (200 OK):
+        ///
+        ///     {
+        ///       "status": "Healthy",
+        ///       "service": "Cart API",
+        ///       "timestamp": "2024-01-15T14:30:00Z",
+        ///       "version": "1.0.0",
+        ///       "environment": "Development"
+        ///     }
         /// </remarks>
         /// <response code="200">API is healthy</response>
         [HttpGet("health")]

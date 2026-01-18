@@ -99,14 +99,29 @@ namespace Lucrarea1PSSC.api.Controllers
         ///        "operatorName": "Ion Operator"
         ///     }
         ///
-        /// This endpoint will:
-        /// - Validate the order exists and is in 'Plasata' state
-        /// - Verify all order details are valid
-        /// - Transition order to 'InPregatire' state
-        /// - Calculate estimated preparation time
-        /// - Publish order pickup events
-        /// - Return pickup receipt
-        /// 
+        /// Sample response (200 OK):
+        ///
+        ///     {
+        ///       "success": true,
+        ///       "message": "Comanda preluata cu succes",
+        ///       "comandaId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+        ///       "numeClient": "Ion Popescu",
+        ///       "operatorName": "Ion Operator",
+        ///       "total": 5849.98,
+        ///       "numarProduse": 2,
+        ///       "pickupTime": "2024-01-15T14:30:00Z",
+        ///       "stareCurenta": "InPregatire",
+        ///       "estimatedPreparationMinutes": 25.5
+        ///     }
+        ///
+        /// Sample error response (400 - Invalid State):
+        ///
+        ///     {
+        ///       "error": "Comanda nu este in starea 'Plasata'. Nu poate fi preluata.",
+        ///       "details": null,
+        ///       "timestamp": "2024-01-15T14:30:00Z"
+        ///     }
+        ///
         /// **Business Rules:**
         /// - Only orders in 'Plasata' state can be picked up
         /// - Operator name must be provided
@@ -202,10 +217,35 @@ namespace Lucrarea1PSSC.api.Controllers
         ///        "isReadyForShipment": true
         ///     }
         ///
-        /// This endpoint will:
-        /// - Verify order is in 'InPregatire' state
-        /// - Mark order as ready (or not ready) for shipment
-        /// - Publish preparation completed event
+        /// Sample response (200 OK - Ready for shipment):
+        ///
+        ///     {
+        ///       "success": true,
+        ///       "message": "Pregatirea comenzii a fost finalizata. Comanda este gata pentru expediere.",
+        ///       "comandaId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+        ///       "numeClient": "Ion Popescu",
+        ///       "operatorName": "Ion Operator",
+        ///       "total": 5849.98,
+        ///       "numarProduse": 2,
+        ///       "pickupTime": "2024-01-15T14:30:00Z",
+        ///       "stareCurenta": null,
+        ///       "estimatedPreparationMinutes": null
+        ///     }
+        ///
+        /// Sample response (200 OK - Not ready for shipment):
+        ///
+        ///     {
+        ///       "success": true,
+        ///       "message": "Pregatirea comenzii a fost finalizata. Comanda necesita verificari suplimentare.",
+        ///       "comandaId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+        ///       "numeClient": "Ion Popescu",
+        ///       "operatorName": "Ion Operator",
+        ///       "total": 5849.98,
+        ///       "numarProduse": 2,
+        ///       "pickupTime": "2024-01-15T14:30:00Z",
+        ///       "stareCurenta": null,
+        ///       "estimatedPreparationMinutes": null
+        ///     }
         /// </remarks>
         /// <response code="200">Order preparation finalized successfully</response>
         /// <response code="400">Invalid request or order state</response>
@@ -279,6 +319,30 @@ namespace Lucrarea1PSSC.api.Controllers
         /// </summary>
         /// <param name="comandaId">The order ID</param>
         /// <returns>Order status and details</returns>
+        /// <remarks>
+        /// Sample request:
+        ///
+        ///     GET /api/preluarecomanda/status/3fa85f64-5717-4562-b3fc-2c963f66afa6
+        ///
+        /// Sample response (200 OK):
+        ///
+        ///     {
+        ///       "comandaId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+        ///       "numeClient": "Ion Popescu",
+        ///       "stare": "InPregatire",
+        ///       "total": 5849.98,
+        ///       "numarProduse": 2,
+        ///       "dataPlasare": "2024-01-15T13:00:00Z",
+        ///       "adresaLivrare": "Str. Avram Iancu nr. 15, Cluj-Napoca, 400000, Romania"
+        ///     }
+        ///
+        /// **Possible States:**
+        /// - Plasata: Order placed, awaiting pickup
+        /// - InPregatire: Order being prepared
+        /// - Expediata: Order shipped
+        /// - Livrata: Order delivered
+        /// - Anulata: Order cancelled
+        /// </remarks>
         [HttpGet("status/{comandaId:guid}")]
         [SwaggerOperation(
             Summary = "?? Get Order Status",
@@ -320,6 +384,41 @@ namespace Lucrarea1PSSC.api.Controllers
         /// </summary>
         /// <param name="state">The order state to filter by</param>
         /// <returns>List of orders in the specified state</returns>
+        /// <remarks>
+        /// Sample request:
+        ///
+        ///     GET /api/preluarecomanda/by-state/Plasata
+        ///
+        /// Sample response (200 OK):
+        ///
+        ///     [
+        ///       {
+        ///         "comandaId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+        ///         "numeClient": "Ion Popescu",
+        ///         "stare": "Plasata",
+        ///         "total": 5849.98,
+        ///         "numarProduse": 2,
+        ///         "dataPlasare": "2024-01-15T13:00:00Z",
+        ///         "adresaLivrare": "Str. Avram Iancu nr. 15, Cluj-Napoca, 400000, Romania"
+        ///       },
+        ///       {
+        ///         "comandaId": "4fb96f75-6828-5673-c4gd-3d074g77bgb7",
+        ///         "numeClient": "Maria Ionescu",
+        ///         "stare": "Plasata",
+        ///         "total": 1299.99,
+        ///         "numarProduse": 1,
+        ///         "dataPlasare": "2024-01-15T14:20:00Z",
+        ///         "adresaLivrare": "Str. Memorandumului nr. 28, Cluj-Napoca, 400114, Romania"
+        ///       }
+        ///     ]
+        ///
+        /// **Valid State Values:**
+        /// - Plasata
+        /// - InPregatire
+        /// - Expediata
+        /// - Livrata
+        /// - Anulata
+        /// </remarks>
         [HttpGet("by-state/{state}")]
         [SwaggerOperation(
             Summary = "?? Get Orders by State",

@@ -22,6 +22,50 @@ namespace Lucrarea1PSSC.api.Controllers
         /// <summary>
         /// Schedule a new delivery
         /// </summary>
+        /// <remarks>
+        /// Sample request:
+        ///
+        ///     POST /api/delivery/schedule
+        ///     {
+        ///       "orderNumber": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+        ///       "customerName": "Ion Popescu",
+        ///       "deliveryAddress": "Str. Avram Iancu nr. 15",
+        ///       "city": "Cluj-Napoca",
+        ///       "postalCode": "400000",
+        ///       "country": "Romania",
+        ///       "phone": "+40721234567",
+        ///       "totalAmount": 5849.98,
+        ///       "totalItems": 2,
+        ///       "orderDate": "2024-01-15T14:30:00Z",
+        ///       "priority": "Express",
+        ///       "notes": "Fragile items - handle with care"
+        ///     }
+        ///
+        /// Sample response (200 OK):
+        ///
+        ///     {
+        ///       "success": true,
+        ///       "deliveryId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+        ///       "trackingNumber": "TRK-20240115-000001",
+        ///       "estimatedDeliveryDate": "2024-01-16T14:30:00Z",
+        ///       "carrier": "FAN Courier Express",
+        ///       "status": "Pending",
+        ///       "message": "Delivery scheduled successfully for Ion Popescu"
+        ///     }
+        ///
+        /// Sample error response (500 - Transient Error for Testing):
+        ///
+        ///     {
+        ///       "error": "Temporary service unavailable"
+        ///     }
+        ///
+        /// **Priority Options:**
+        /// - Standard (3 days delivery)
+        /// - Express (1 day delivery)
+        /// - Next-Day (1 day delivery)
+        /// 
+        /// **Note:** This endpoint simulates 20% failure rate for retry policy testing
+        /// </remarks>
         [HttpPost("schedule")]
         [SwaggerOperation(
             Summary = "?? Schedule Delivery",
@@ -71,6 +115,29 @@ namespace Lucrarea1PSSC.api.Controllers
         /// <summary>
         /// Get delivery status by tracking number
         /// </summary>
+        /// <remarks>
+        /// Sample request:
+        ///
+        ///     GET /api/delivery/status/TRK-20240115-000001
+        ///
+        /// Sample response (200 OK):
+        ///
+        ///     {
+        ///       "deliveryId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+        ///       "trackingNumber": "TRK-20240115-000001",
+        ///       "status": "InTransit",
+        ///       "location": "Distribution Center - Cluj-Napoca",
+        ///       "updatedAt": "2024-01-15T16:45:00Z",
+        ///       "notes": "Package is intransit"
+        ///     }
+        ///
+        /// **Possible Status Values:**
+        /// - Pending: Delivery request created, awaiting pickup
+        /// - PickedUp: Package collected from sender
+        /// - InTransit: Package in transit to destination
+        /// - OutForDelivery: Package out for final delivery
+        /// - Delivered: Package successfully delivered
+        /// </remarks>
         [HttpGet("status/{trackingNumber}")]
         [SwaggerOperation(
             Summary = "?? Get Delivery Status",
@@ -105,6 +172,22 @@ namespace Lucrarea1PSSC.api.Controllers
         /// <summary>
         /// Cancel a scheduled delivery
         /// </summary>
+        /// <remarks>
+        /// Sample request:
+        ///
+        ///     POST /api/delivery/cancel
+        ///     {
+        ///       "deliveryId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+        ///       "reason": "Customer requested cancellation"
+        ///     }
+        ///
+        /// Sample response (200 OK):
+        ///
+        ///     {
+        ///       "success": true,
+        ///       "message": "Delivery cancelled successfully"
+        ///     }
+        /// </remarks>
         [HttpPost("cancel")]
         [SwaggerOperation(
             Summary = "? Cancel Delivery",
