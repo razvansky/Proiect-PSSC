@@ -23,6 +23,91 @@
     --border-radius: 8px;
     --box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1);
     --box-shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
+    
+    /* Animation variables */
+    --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-base: 250ms cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-slow: 350ms cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-spring: 400ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* =========================
+   Global Smooth Animations
+   ========================= */
+
+* {
+    transition: background-color var(--transition-base), 
+                border-color var(--transition-base),
+                color var(--transition-base),
+                opacity var(--transition-base);
+}
+
+/* Smooth scrolling */
+html {
+    scroll-behavior: smooth;
+}
+
+/* Fade-in animation for page load */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes scaleIn {
+    from {
+        opacity: 0;
+        transform: scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+@keyframes pulse {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.7;
+    }
+}
+
+@keyframes shimmer {
+    0% {
+        background-position: -1000px 0;
+    }
+    100% {
+        background-position: 1000px 0;
+    }
 }
 
 /* =========================
@@ -41,6 +126,7 @@ body {
     max-width: 1400px;
     margin: 0 auto;
     padding: 2rem;
+    animation: fadeIn var(--transition-slow) ease-out;
 }
 
 /* Improve text readability */
@@ -65,6 +151,12 @@ body {
     font-weight: 700;
     text-decoration: none;
     letter-spacing: -0.02em;
+    transition: transform var(--transition-base), opacity var(--transition-base);
+}
+
+.swagger-ui .topbar .link:hover {
+    transform: translateY(-2px);
+    opacity: 0.9;
 }
 
 .swagger-ui .topbar .link::before {
@@ -96,6 +188,7 @@ body {
     border-radius: var(--border-radius);
     padding: 2rem;
     box-shadow: var(--box-shadow);
+    animation: slideDown var(--transition-slow) ease-out;
 }
 
 .swagger-ui .info .title {
@@ -175,6 +268,7 @@ body {
     border-radius: var(--border-radius);
     padding: 1.5rem;
     margin: 1rem 0 2rem;
+    animation: slideDown var(--transition-base) ease-out;
 }
 
 .swagger-ui .schemes {
@@ -212,6 +306,7 @@ body {
     box-shadow: var(--box-shadow);
     margin-bottom: 2rem;
     overflow: hidden;
+    animation: fadeIn var(--transition-slow) ease-out;
 }
 
 .swagger-ui .opblock-tag a {
@@ -226,12 +321,12 @@ body {
     border-radius: var(--border-radius);
     margin: 0.5rem 0;
     box-shadow: var(--box-shadow);
-    transition: all 0.3s ease;
+    transition: all var(--transition-spring);
 }
 
 .swagger-ui .opblock:hover {
     box-shadow: var(--box-shadow-lg);
-    transform: translateY(-2px);
+    transform: translateY(-2px) scale(1.005);
 }
 
 /* =========================
@@ -329,7 +424,7 @@ body {
     border-radius: 6px;
     padding: 0.625rem 1.25rem;
     font-weight: 600;
-    transition: all 0.2s ease;
+    transition: all var(--transition-spring);
     font-size: 0.9375rem;
     letter-spacing: 0.01em;
 }
@@ -342,8 +437,8 @@ body {
 
 .swagger-ui .btn.try-out__btn:hover {
     background: var(--primary-dark);
-    transform: translateY(-1px);
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(37, 99, 235, 0.3);
 }
 
 .swagger-ui .btn.execute {
@@ -353,21 +448,26 @@ body {
     font-size: 1rem;
     padding: 0.75rem 2rem;
     font-weight: 700;
+    transition: all var(--transition-spring);
 }
 
 .swagger-ui .btn.execute:hover {
     background: #16a34a;
-    transform: translateY(-1px);
+    transform: translateY(-2px) scale(1.05);
+    box-shadow: 0 4px 12px rgba(34, 197, 94, 0.3);
 }
 
 .swagger-ui .btn.cancel {
     background: var(--error-color);
     color: white;
     border: none;
+    transition: all var(--transition-base);
 }
 
 .swagger-ui .btn.cancel:hover {
     background: #dc2626;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
 }
 
 /* =========================
@@ -378,6 +478,7 @@ body {
     background: var(--bg-secondary);
     border-radius: var(--border-radius);
     padding: 1rem;
+    animation: scaleIn var(--transition-base) ease-out;
 }
 
 .swagger-ui .parameters-col_name {
@@ -463,6 +564,7 @@ body {
     background: var(--bg-secondary);
     border-radius: var(--border-radius);
     padding: 1rem;
+    animation: slideUp var(--transition-base) ease-out;
 }
 
 .swagger-ui .response-col_status {
@@ -475,6 +577,11 @@ body {
     border-radius: 6px;
     min-width: 60px;
     text-align: center;
+    transition: all var(--transition-base);
+}
+
+.swagger-ui .response .response-col_status:hover {
+    transform: scale(1.05);
 }
 
 .swagger-ui .response-col_description {
@@ -523,6 +630,7 @@ body {
     background: #1e293b;
     border-radius: 6px;
     padding: 1rem;
+    animation: fadeIn var(--transition-base) ease-out;
 }
 
 .swagger-ui .highlight-code > .microlight {
@@ -750,6 +858,7 @@ body {
     border-radius: var(--border-radius);
     padding: 1rem;
     margin: 1rem 0;
+    animation: slideDown var(--transition-base) ease-out;
 }
 
 .swagger-ui .errors-wrapper .errors {
@@ -906,9 +1015,119 @@ body {
     color: var(--primary-color);
     text-decoration: none;
     font-weight: 500;
+    transition: all var(--transition-base);
 }
 
 .swagger-ui .info__contact a:hover,
 .swagger-ui .info__license a:hover {
     text-decoration: underline;
+    color: var(--primary-dark);
+    transform: translateX(3px);
+}
+
+/* =========================
+   Additional Smooth Animations
+   ========================= */
+
+/* Animate operation expansion */
+.swagger-ui .opblock.is-open .opblock-summary {
+    border-bottom: 1px solid var(--border-color);
+    animation: pulse 0.3s ease-out;
+}
+
+/* Animate collapsible sections */
+.swagger-ui .model-container {
+    animation: fadeIn var(--transition-base) ease-out;
+}
+
+/* Smooth expand/collapse */
+.swagger-ui .opblock-body {
+    animation: slideDown var(--transition-slow) ease-out;
+}
+
+/* Add hover effect to operation summary */
+.swagger-ui .opblock-summary:hover {
+    background: rgba(0, 0, 0, 0.02);
+    cursor: pointer;
+}
+
+/* Animate authorization button */
+.swagger-ui .btn.authorize {
+    transition: all var(--transition-spring);
+}
+
+.swagger-ui .btn.authorize:hover {
+    transform: scale(1.05);
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+}
+
+/* Loading spinner animation enhancement */
+@keyframes spin {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.swagger-ui .loading-container {
+    animation: fadeIn var(--transition-base) ease-out;
+}
+
+/* Smooth table row animations */
+.swagger-ui table tbody tr {
+    transition: background-color var(--transition-fast);
+}
+
+.swagger-ui table tbody tr:hover {
+    background: rgba(37, 99, 235, 0.05);
+}
+
+/* Response header animations */
+.swagger-ui .response-control-media-type__accept-message {
+    animation: slideUp var(--transition-base) ease-out;
+}
+
+/* Tab animations */
+.swagger-ui .tab {
+    transition: all var(--transition-base);
+}
+
+.swagger-ui .tab:hover {
+    transform: translateY(-1px);
+}
+
+/* Model toggle animations */
+.swagger-ui .model-toggle {
+    transition: transform var(--transition-base);
+}
+
+.swagger-ui .model-toggle:hover {
+    transform: scale(1.1);
+}
+
+/* Copy button animation */
+.swagger-ui .copy-to-clipboard {
+    transition: all var(--transition-base);
+}
+
+.swagger-ui .copy-to-clipboard:hover {
+    transform: scale(1.1);
+    opacity: 1 !important;
+}
+
+/* Stagger animation for multiple items */
+.swagger-ui .opblock:nth-child(1) { animation-delay: 0ms; }
+.swagger-ui .opblock:nth-child(2) { animation-delay: 50ms; }
+.swagger-ui .opblock:nth-child(3) { animation-delay: 100ms; }
+.swagger-ui .opblock:nth-child(4) { animation-delay: 150ms; }
+.swagger-ui .opblock:nth-child(5) { animation-delay: 200ms; }
+
+/* Enhance focus states with smooth transitions */
+.swagger-ui input:focus,
+.swagger-ui textarea:focus,
+.swagger-ui select:focus {
+    transform: scale(1.01);
+    transition: all var(--transition-base);
 }
