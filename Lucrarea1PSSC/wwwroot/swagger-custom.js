@@ -803,18 +803,20 @@
             const status = document.createElement('div');
             status.className = 'status-indicator';
             status.style.cssText = `
-                position: absolute;
-                right: 2rem;
-                top: 50%;
-                transform: translateY(-50%);
+                position: fixed;
+                right: 0;
+                top: 0;
                 display: flex;
                 align-items: center;
                 gap: 0.625rem;
-                background: rgba(255, 255, 255, 0.15);
+                background: rgba(255, 255, 255, 0.9);
                 padding: 0.625rem 1.25rem;
-                border-radius: 8px;
-                backdrop-filter: blur(10px);
-                border: 1px solid rgba(255, 255, 255, 0.2);
+                border-radius: 0 0 0 8px;
+                backdrop-filter: blur(20px);
+                border-left: 1px solid rgba(0, 0, 0, 0.1);
+                border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+                z-index: 9999;
             `;
             
             fetch('/api/cart/health')
@@ -828,7 +830,7 @@
                                      display: inline-block;
                                      animation: pulse 2s infinite;
                                      box-shadow: 0 0 10px rgba(34, 197, 94, 0.5);"></span>
-                        <span style="color: white; 
+                        <span style="color: #000000; 
                                      font-size: 0.9375rem; 
                                      font-weight: 700;
                                      letter-spacing: 0.025em;">
@@ -852,7 +854,7 @@
                                      background: #ef4444; 
                                      border-radius: 50%;
                                      display: inline-block;"></span>
-                        <span style="color: white; 
+                        <span style="color: #000000; 
                                      font-size: 0.9375rem; 
                                      font-weight: 700;">
                             API Service Offline
@@ -860,8 +862,7 @@
                     `;
                 });
             
-            topbar.style.position = 'relative';
-            topbar.appendChild(status);
+            document.body.appendChild(status);
         }
     }
 
