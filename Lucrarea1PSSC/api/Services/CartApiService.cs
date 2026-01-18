@@ -114,13 +114,13 @@ namespace Lucrarea1PSSC.api.Services
             try
             {
                 if (string.IsNullOrWhiteSpace(customerName))
-                    return (false, null, "Customer name is required");
+                    return (false, null, "Customer name is required. Please provide a valid customer name (e.g., 'Ion Popescu', 'Maria Ionescu')");
 
                 var normalizedCustomerName = customerName.Trim();
                 var persoana = _persoane!.FirstOrDefault(p =>
                     string.Equals(p.Nume.Name?.Trim(), normalizedCustomerName, StringComparison.OrdinalIgnoreCase));
                 if (persoana == null)
-                    return (false, null, $"Customer '{customerName}' not found");
+                    return (false, null, $"Customer '{customerName}' not found. Available test customers: Ion Popescu, Maria Ionescu, Andrei Stanciu, Elena Radu, Mihai Popa");
 
                 var cos = GetOrCreateCart(customerName);
                 var produseInCos = cos.GetProduseCos() ?? new List<ProdusCos>();
@@ -175,9 +175,9 @@ namespace Lucrarea1PSSC.api.Services
                 Console.WriteLine($"[DEBUG] Quantity: {request.Quantity}");
                 
                 if (string.IsNullOrWhiteSpace(request.CustomerName))
-                    return (false, null, "Customer name is required");
+                    return (false, null, "Customer name is required. Please provide a valid customer name (e.g., 'Ion Popescu', 'Maria Ionescu')");
                 if (string.IsNullOrWhiteSpace(request.ProductName))
-                    return (false, null, "Product name is required");
+                    return (false, null, "Product name is required. Please provide a valid product name (e.g., 'Laptop Dell XPS 15', 'iPhone 15 Pro')");
 
                 Console.WriteLine($"\n[DEBUG] Products in memory: {_produse!.Count}");
                 foreach (var p in _produse!)
@@ -192,7 +192,7 @@ namespace Lucrarea1PSSC.api.Services
                 if (persoana == null)
                 {
                     Console.WriteLine($"[DEBUG] ? Customer not found!");
-                    return (false, null, $"Customer '{request.CustomerName}' not found");
+                    return (false, null, $"Customer '{request.CustomerName}' not found. Try one of these test customers: Ion Popescu, Maria Ionescu, Andrei Stanciu, Elena Radu, Mihai Popa");
                 }
                 Console.WriteLine($"[DEBUG] ? Customer found: {persoana.Nume.Name}");
 
@@ -266,25 +266,25 @@ namespace Lucrarea1PSSC.api.Services
             try
             {
                 if (string.IsNullOrWhiteSpace(request.CustomerName))
-                    return (false, null, "Customer name is required");
+                    return (false, null, "Customer name is required. Please provide a valid customer name (e.g., 'Ion Popescu', 'Maria Ionescu')");
 
                 var normalizedCustomerName = NormalizeKey(request.CustomerName);
                 var persoana = _persoane!.FirstOrDefault(p =>
                     string.Equals(p.Nume.Name?.Trim(), normalizedCustomerName, StringComparison.OrdinalIgnoreCase));
 
                 if (persoana == null)
-                    return (false, null, $"Customer '{request.CustomerName}' not found");
+                    return (false, null, $"Customer '{request.CustomerName}' not found. Available test customers: Ion Popescu, Maria Ionescu, Andrei Stanciu, Elena Radu, Mihai Popa");
 
                 if (!_activeCarts.ContainsKey(normalizedCustomerName))
-                    return (false, null, "No active cart found");
+                    return (false, null, "No active cart found for this customer. Please add items to the cart first using the /api/cart/add-product endpoint");
 
                 var cos = _activeCarts[normalizedCustomerName];
                 var stareCos = cos.GetStareCos();
 
                 if (stareCos is PayedCos)
-                    return (false, null, "Cart is already paid");
+                    return (false, null, "Cart is already paid. This cart has already been processed. Please create a new cart by adding products");
                 if (stareCos is EmptyCos)
-                    return (false, null, "Cart is empty");
+                    return (false, null, "Cart is empty. Please add products to the cart first using the /api/cart/add-product endpoint");
 
                 var totalAmount = cos.TotalCos();
                 var itemCount = cos.GetProduseCos().Count;

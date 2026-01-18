@@ -944,19 +944,109 @@
                     if (name.includes('customer') || name.includes('name')) {
                         input.placeholder = 'e.g., Ion Popescu';
                         input.setAttribute('title', 'Enter a customer name from the test data');
+                        input.setAttribute('pattern', '[A-Za-z ]+');
+                        
+                        // Create error message element
+                        const errorMsg = document.createElement('div');
+                        errorMsg.className = 'validation-error';
+                        errorMsg.style.cssText = `
+                            color: #dc2626;
+                            font-size: 0.875rem;
+                            margin-top: 0.25rem;
+                            display: none;
+                            font-weight: 500;
+                        `;
+                        errorMsg.textContent = '⚠ Only letters and spaces allowed (e.g., Ion Popescu, Maria Ionescu)';
+                        input.parentElement.appendChild(errorMsg);
+                        
+                        input.addEventListener('input', function(e) {
+                            const value = e.target.value;
+                            const error = e.target.parentElement.querySelector('.validation-error');
+                            if (value && !/^[A-Za-z\s]+$/.test(value)) {
+                                e.target.style.borderColor = '#ef4444';
+                                e.target.style.backgroundColor = '#fef2f2';
+                                if (error) error.style.display = 'block';
+                            } else {
+                                e.target.style.borderColor = '';
+                                e.target.style.backgroundColor = '';
+                                if (error) error.style.display = 'none';
+                            }
+                        });
                     } else if (name.includes('product')) {
                         input.placeholder = 'e.g., Laptop Dell XPS 15';
                         input.setAttribute('title', 'Enter a product name from the catalog');
                     } else if (name.includes('email')) {
                         input.placeholder = 'e.g., customer@example.com';
                         input.setAttribute('title', 'Enter a valid email address');
+                        input.setAttribute('pattern', '[a-z0-9._%+-]+@[a-z0-9.-]+\\.[a-z]{2,}$');
+                        
+                        // Create error message element for email
+                        const errorMsg = document.createElement('div');
+                        errorMsg.className = 'validation-error';
+                        errorMsg.style.cssText = `
+                            color: #dc2626;
+                            font-size: 0.875rem;
+                            margin-top: 0.25rem;
+                            display: none;
+                            font-weight: 500;
+                        `;
+                        errorMsg.textContent = '⚠ Please enter a valid email address';
+                        input.parentElement.appendChild(errorMsg);
+                        
+                        input.addEventListener('input', function(e) {
+                            const value = e.target.value;
+                            const error = e.target.parentElement.querySelector('.validation-error');
+                            if (value && !/^[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}$/i.test(value)) {
+                                e.target.style.borderColor = '#ef4444';
+                                e.target.style.backgroundColor = '#fef2f2';
+                                if (error) error.style.display = 'block';
+                            } else {
+                                e.target.style.borderColor = '';
+                                e.target.style.backgroundColor = '';
+                                if (error) error.style.display = 'none';
+                            }
+                        });
                     } else if (name.includes('quantity')) {
                         input.placeholder = 'e.g., 1';
                         input.setAttribute('title', 'Enter the quantity (whole number)');
+                        input.setAttribute('type', 'number');
+                        input.setAttribute('min', '1');
+                        
+                        // Create error message element for quantity
+                        const errorMsg = document.createElement('div');
+                        errorMsg.className = 'validation-error';
+                        errorMsg.style.cssText = `
+                            color: #dc2626;
+                            font-size: 0.875rem;
+                            margin-top: 0.25rem;
+                            display: none;
+                            font-weight: 500;
+                        `;
+                        errorMsg.textContent = '⚠ Quantity must be a number greater than 0';
+                        input.parentElement.appendChild(errorMsg);
+                        
+                        input.addEventListener('input', function(e) {
+                            const value = e.target.value;
+                            const error = e.target.parentElement.querySelector('.validation-error');
+                            if (value && (isNaN(value) || parseInt(value) < 1)) {
+                                e.target.style.borderColor = '#ef4444';
+                                e.target.style.backgroundColor = '#fef2f2';
+                                if (error) error.style.display = 'block';
+                            } else {
+                                e.target.style.borderColor = '';
+                                e.target.style.backgroundColor = '';
+                                if (error) error.style.display = 'none';
+                            }
+                        });
                     }
                 }
             });
         }, 1500);
+        
+        // Re-run periodically to catch dynamically added inputs
+        setInterval(function() {
+            improveExamples();
+        }, 3000);
     }
 
     // Initialize all enhancements
